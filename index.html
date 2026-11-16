@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kísérleti Lőtér</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Elrendezés: lőtéri irányítópult. Felül állapotsor, középen görgethető lap, alul fülek; az indítás teljes képernyős vászon. */
+  --ink:#0d1726; --panel:#15233a; --line:#2a3c5c; --paper:#e9e4d6; --dim:#8fa0b8;
+  --flame:#ff8a2b; --trace:#63d3e6; --ok:#7bd48a; --bad:#ff5d4d;
+  --disp:'Big Shoulders Display','Arial Narrow',sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ink);color:var(--paper);font:15px/1.45 var(--body);display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 16px 8px;border-bottom:1px solid var(--line);background:linear-gradient(#101c30,#0d1726)}
+.brand{font:800 22px/1 var(--disp);letter-spacing:.08em;text-transform:uppercase}
+.brand b{color:var(--flame)}
+#stat{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font:400 12px var(--mono);color:var(--dim)}
+#stat span b{color:var(--paper);font-weight:600}
+main{flex:1;overflow-y:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;background-image:linear-gradient(rgba(99,211,230,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(99,211,230,.035) 1px,transparent 1px);background-size:24px 24px}
+nav{display:flex;border-top:1px solid var(--line);background:#0a1220}
+nav button{flex:1;min-width:0;padding:12px 0;background:none;border:0;border-top:3px solid transparent;color:var(--dim);font:600 12px var(--disp);letter-spacing:0;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+nav button[aria-current=true]{color:var(--paper);border-top-color:var(--flame);background:linear-gradient(rgba(255,138,43,.16),transparent)}
+.card{background:linear-gradient(#192a45,#13203a);border:1px solid var(--line);border-radius:5px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 6px 18px rgba(0,0,0,.28);flex:none}
+.hero{padding:0;position:relative;overflow:hidden}
+#hero{width:100%;aspect-ratio:2/1;display:block}
+.herot{position:absolute;left:14px;top:12px;width:46%;display:flex;flex-direction:column;gap:6px}
+.big{font:800 26px/1 var(--disp);letter-spacing:.03em;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.herot .eyebrow{color:var(--paper);text-shadow:0 1px 6px rgba(0,0,0,.7)}
+.prog{height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}.prog i{display:block;height:100%;background:var(--flame)}
+h2::before{content:'';display:inline-block;width:12px;height:3px;background:var(--flame);margin-right:8px;vertical-align:middle}
+h2{font:800 20px/1.1 var(--disp);letter-spacing:.05em;text-transform:uppercase;margin:0;text-wrap:balance}
+h3{font:600 14px var(--body);margin:0}
+p{margin:0;max-width:65ch}
+.dim{color:var(--dim);font-size:13px}
+.eyebrow{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--trace)}
+button.act{background:linear-gradient(#ffa350,#f07a1c);box-shadow:0 2px 10px rgba(255,138,43,.3);color:#1a0d02;border:0;border-radius:3px;padding:11px 14px;font:800 17px var(--disp);letter-spacing:.06em;text-transform:uppercase}
+button.act:disabled{background:#3a4660;color:#8090a8;box-shadow:none}
+button.sec{background:none;border:1px solid var(--line);color:var(--paper);border-radius:3px;padding:8px 12px;font:600 13px var(--body)}
+button.sec:disabled{color:#5d6c85}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--trace);outline-offset:2px}
+select{width:100%;background:#0d1726;color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px;font:400 14px var(--body)}
+label{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-top:4px}
+output{font:600 13px var(--mono);color:var(--paper)}
+input[type=range]{width:100%;accent-color:var(--flame);margin:2px 0 4px}
+.rk{display:flex;gap:10px;align-items:flex-start}
+.rk canvas{width:84px;height:220px;flex:none;border:1px dashed var(--line);border-radius:3px;background:#0b1422}
+.stg{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0}
+.st{border-left:3px solid var(--line);padding-left:10px}
+.stl{display:flex;justify-content:space-between;align-items:center;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.x{background:none;border:0;color:var(--bad);font:400 12px var(--mono);padding:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font:400 13px var(--mono);font-variant-numeric:tabular-nums}
+.grid div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted var(--line);padding:2px 0}
+.grid div span{color:var(--dim)}
+.pill{display:inline-block;font:600 11px var(--mono);padding:2px 7px;border-radius:9px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:var(--ok)} .pill.bad{color:var(--bad);border-color:var(--bad)} .pill.go{color:var(--flame);border-color:var(--flame)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tech{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:4px}
+.tech:first-of-type{border-top:0;padding-top:0}
+.bar{height:10px;background:#0b1422;border:1px solid var(--line);border-radius:2px;display:flex;gap:2px;padding:1px}
+.bar i{flex:1;background:#24344f} .bar i.on{background:var(--trace)} .bar i.min{background:var(--flame)}
+.log{font:400 12px var(--mono);color:var(--dim);display:flex;flex-direction:column;gap:3px}
+.fine{display:flex;gap:6px}
+.fine button{flex:1}
+#fly{position:fixed;inset:0;background:#000;z-index:10}
+#fly[hidden]{display:none}
+#cv{width:100%;height:100%;display:block}
+#skip{position:absolute;right:14px;top:14px;background:rgba(13,23,38,.7);border:1px solid var(--line);color:var(--paper);padding:8px 12px;border-radius:3px;font:600 12px var(--mono)}
+#res{position:absolute;left:12px;right:12px;bottom:12px;max-height:80%;overflow:auto;background:rgba(13,23,38,.94);border:1px solid var(--line);border-radius:4px;padding:14px;display:flex;flex-direction:column;gap:8px}
+#res[hidden]{display:none}
+table{border-collapse:collapse;width:100%;font:400 12px var(--mono);font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)} th:first-child,td:first-child{text-align:left}
+th{color:var(--dim);font-weight:400}
+.scroll{overflow-x:auto}
+#wmap{width:100%;aspect-ratio:4/3;display:block;border:1px solid var(--line);border-radius:3px}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#mbtn{background:none;border:1px solid var(--line);color:var(--paper);border-radius:3px;padding:6px 12px;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+#ov{position:fixed;inset:0;z-index:20;background:rgba(6,11,20,.97);overflow-y:auto;padding:18px 16px 28px;display:flex;flex-direction:column;gap:12px}
+#ov[hidden]{display:none}
+.ttlwrap{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
+#tcv{width:100%;aspect-ratio:2/1;display:block;border:1px solid var(--line);border-radius:5px}
+.ttl{font:800 52px/.92 var(--disp);letter-spacing:.04em;text-transform:uppercase}.ttl b{color:var(--flame);display:block}
+.ttl.sm{font-size:38px}
+#toast{position:fixed;left:12px;right:12px;top:10px;z-index:40;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.tst{background:#101c30;border:1px solid var(--ok);border-left:4px solid var(--ok);border-radius:4px;padding:9px 12px;font:600 13px var(--body);box-shadow:0 6px 18px rgba(0,0,0,.5);animation:tin .25s ease-out}
+.tst.ach{border-color:var(--flame)}.tst.bad{border-color:var(--bad)}
+@keyframes tin{from{transform:translateY(-12px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.tst{animation:none}}
+input[type=text],textarea{width:100%;min-width:0;background:#0d1726;color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:9px;font:400 14px var(--body)}
+textarea{font:400 11px var(--mono);resize:vertical;word-break:break-all}
+.fine input[type=text]{flex:2}
+.tip{border-left:3px solid var(--flame)}
+.news h3{font:800 19px/1.15 var(--disp);letter-spacing:.02em}
+.seg{display:flex;gap:6px}.seg button{flex:1;padding:8px 4px;font-size:12px}
+button.sec[aria-pressed=true]{border-color:var(--flame);color:var(--flame)}
+.dif{display:flex;flex-direction:column;gap:2px;text-align:left}.dif b{font:800 17px var(--disp);letter-spacing:.05em;text-transform:uppercase}
+.lock{opacity:.45}
+</style>
+</head>
+<body>
+<header><div class="hd"><div class="brand">Kísérleti <b>Lőtér</b></div><button id="mbtn" data-a="menu">Menü</button></div><div id="stat"></div></header>
+<main id="main"></main>
+<nav id="tabs"></nav>
+<div id="fly" hidden><canvas id="cv"></canvas><button id="skip" data-a="skip">Ugrás a végére</button><div id="res" hidden></div></div>
+<div id="ov" hidden></div><div id="toast" aria-live="polite"></div>
+
+<script>
+/* ---------- Fizika (DOM nélkül) ---------- */
+const g0=9.80665, RE=6371000, MU=3.986004e14;
+const ENG={
+  a1:{n:'A-1 alkohol/LOX',F:300e3,isl:215,iv:248,m:900,sf:.16,c:3},
+  sol:{n:'Sz-1 szilárd',F:420e3,isl:228,iv:258,m:350,sf:.14,c:2},
+  k1:{n:'K-1 kerozin/LOX',F:440e3,isl:255,iv:290,m:650,sf:.10,c:5,t:'k1'},
+  k2:{n:'K-2 nagynyomású kerozin',F:900e3,isl:283,iv:312,m:1100,sf:.08,c:9,t:'k2'},
+  h1:{n:'H-1 hidrogén/LOX',F:110e3,isl:210,iv:444,m:260,sf:.14,c:11,t:'h1'},
+  hyp:{n:'T-1 tárolható',F:450e3,isl:259,iv:292,m:600,sf:.09,c:5,t:'hyp'},
+  sol2:{n:'S-2 kompozit szilárd',F:1200e3,isl:245,iv:275,m:500,sf:.09,c:6,t:'sol2'},
+  k3:{n:'K-3 zárt ciklusú kerozin',F:1800e3,isl:311,iv:338,m:1500,sf:.07,c:16,t:'k3'},
+  h2:{n:'H-2 nagy hidrogénhajtómű',F:1000e3,isl:366,iv:452,m:1800,sf:.13,c:28,t:'h2'},
+  f1:{n:'F-1 óriás kerozinhajtómű',F:6800e3,isl:265,iv:304,m:8400,sf:.06,c:45,t:'f1'},
+  ntr:{n:'N-1 nukleáris termikus',F:330e3,isl:380,iv:850,m:3500,sf:.16,c:40,t:'ntr'}
+};
+const WH={
+  inst:{n:'Műszercsomag',m:300,y:0,c:0,mat:0},
+  sat:{n:'Nehéz műszeres teher',m:2500,y:0,c:5,mat:0},
+  crew:{n:'Űrkabin',m:5000,y:0,c:20,mat:0,t:'crew'},
+  stat:{n:'Űrállomás-modul',m:20000,y:0,c:40,mat:0,t:'station'},
+  lun:{n:'Holdkomp',m:15000,y:0,c:60,mat:0,t:'lunar'},
+  fis1:{n:'Hasadó töltet I',m:4000,y:15,c:15,mat:3,nuc:1},
+  fis2:{n:'Kompakt hasadó töltet',m:1000,y:50,c:15,mat:2,nuc:1},
+  fis3:{n:'Nagy hatóerejű hasadó töltet',m:1200,y:150,c:18,mat:3,nuc:1},
+  fus1:{n:'Fúziós töltet I',m:2500,y:1000,c:25,mat:4,nuc:1,fus:1},
+  fus2:{n:'Kompakt fúziós töltet',m:700,y:500,c:25,mat:3,nuc:1,fus:1},
+  fus3:{n:'Nagy fúziós töltet',m:4000,y:5000,c:30,mat:5,nuc:1,fus:1},
+  fus4:{n:'Többmegatonnás kísérleti eszköz',m:15000,y:25000,c:40,mat:7,nuc:1,fus:1},
+  fus5:{n:'Óriás kísérleti eszköz',m:27000,y:50000,c:50,mat:9,nuc:1,fus:1}
+};
+let CONVK=.5;
+function whInfo(d){return d.wh==='conv'?{n:'Hagyományos töltet',m:d.convMass,y:d.convMass*CONVK/1e6,c:1,mat:0}:WH[d.wh]}
+function effR(y){return 0.7*Math.cbrt(y)}            // hatássugár km-ben, köbgyökös skálázás
+function build(d,alloy){
+  const w=whInfo(d);
+  const stages=d.stages.map(s=>{const e=ENG[s.eng];return{e,id:s.eng,n:s.n,prop:s.prop,dry:e.m*s.n+s.prop*e.sf*(alloy||1)+300,F:e.F*s.n,mdot:e.F*s.n/(e.iv*g0)}});
+  const m0=w.m+stages.reduce((a,s)=>a+s.dry+s.prop,0);
+  let dv=0,m=m0;for(const s of stages){dv+=s.e.iv*g0*Math.log(m/(m-s.prop));m-=s.prop+s.dry}
+  const dia=0.7+0.33*Math.cbrt(m0/1000);
+  const twr=stages[0].F*stages[0].e.isl/stages[0].e.iv/(m0*g0);
+  const cost=3+w.c+d.stages.reduce((a,s)=>a+ENG[s.eng].c*s.n+s.prop*2e-4,0);
+  return{w,stages,m0,dv,dia,twr,cost};
+}
+function pitchProg(d,t){const th=d.pitch*Math.PI/180,s0=d.stages[0],e0=ENG[s0.eng],tb=s0.prop*e0.iv*g0/(e0.F*s0.n),tv=Math.min(8,.2*tb),tr=Math.min(Math.max(1,d.pitch),Math.max(1,.6*tb-tv));return t<tv?0:Math.min(th,th*(t-tv)/tr)}
+function pitchAt(d,t,si){return d.goal&&!d.target&&si>0&&si===d.stages.length-1?Math.PI/2:pitchProg(d,t)}
+function simulate(d,o={}){
+  const B=build(d,o.alloy),w=B.w,A=Math.PI*B.dia*B.dia/4;
+  const rvD=0.5+0.22*Math.cbrt(w.m/100),rvA=Math.PI*rvD*rvD/4,hl=o.heatLimit||1e99;
+  let x=0,y=RE,vx=0,vy=0,t=0,m=B.m0,si=0,prop=B.stages[0].prop,burning=true,sep=false,lifted=false;
+  const last=B.stages.length-1,lastLim=B.stages[last].prop*(1-d.cutoff/100),kick=last>0&&!d.target&&(d.goal==='orb'||d.goal==='hi')&&d.ign!=='now';const hold=last>0&&!d.target&&(d.goal==='orb'||d.goal==='hi'),hT=d.goal==='hi'?1060e3:180e3;let coasting=false,phaseA=false;
+  let pts=[],apo=0,maxQ=0,maxHeat=0,vRe=0,out=null,orbit=false,escape=false,lastS=-9,burnT=null,failT=null,rp=0,bo=null,tCap=kick?40000:7200,ev=[],vmax=0;
+  while(t<tCap){
+    const r=Math.hypot(x,y),h=r-RE,ux=x/r,uy=y/r,tx=uy,ty=-ux,v=Math.hypot(vx,vy);
+    const rho=h<150e3?1.225*Math.exp(-h/8500):0;
+    const dt=burning?0.05:(h>120e3?1:0.1);
+    if(t-lastS>=(burning||h<60e3?0.5:4)){pts.push({t,x,y,h,v,si,b:burning,sep});lastS=t}
+    let ax=-MU*x/(r*r*r),ay=-MU*y/(r*r*r);
+    const st=B.stages[si];
+    if(burning){
+      const F=st.F*(1-(1-st.e.isl/st.e.iv)*Math.exp(-h/8500)),a=!(hold&&si===last)?pitchAt(d,t,si):phaseA?pitchProg(d,t):Math.acos(Math.max(0,Math.min(.97,(MU/(r*r)-Math.pow(vx*tx+vy*ty,2)/r-.15*(vx*ux+vy*uy))*m/F)));
+      const lim=si===last?lastLim:0,dm0=st.mdot*dt,fr=prop-dm0<lim?Math.max(0,(prop-lim)/dm0):1,dm=dm0*fr;
+      ax+=fr*F*(ux*Math.cos(a)+tx*Math.sin(a))/m;ay+=fr*F*(uy*Math.cos(a)+ty*Math.sin(a))/m;
+      prop-=dm;m-=dm;
+    }
+    if(rho>0&&v>1){
+      const M=v/300,cd=sep?0.15:(M<.8?.3:M<1.2?.3+.5*(M-.8):Math.max(.25,.5-.06*(M-1.2)));
+      const D=.5*rho*v*v*cd*(sep?rvA:A)/m;ax-=D*vx/v;ay-=D*vy/v;
+      const q=.5*rho*v*v;if(q>maxQ)maxQ=q;
+      if(sep){const hf=1.74e-4*Math.sqrt(rho/0.3)*v*v*v;if(hf>maxHeat)maxHeat=hf;if(hf>hl&&burnT===null)burnT=t}
+    }
+    vx+=ax*dt;vy+=ay*dt;
+    const vr=vx*ux+vy*uy;
+    if(phaseA&&burning){const e1=(vx*vx+vy*vy)/2-MU/r,h1=x*vy-y*vx;if(e1>=0||-MU/(2*e1)*(1+Math.sqrt(Math.max(0,1+2*e1*h1*h1/(MU*MU))))-RE>=hT){phaseA=false;burning=false;coasting=true;ev.push({t,k:'coast'})}}
+    if(coasting&&vr<=0){coasting=false;burning=true;ev.push({t,k:'ign'})}
+    if(!lifted){if(vr<=0){vx=0;vy=0}else lifted=true}
+    if(sep&&!vRe&&h<100e3&&vr<0)vRe=v;
+    const px=x,py=y;x+=vx*dt;y+=vy*dt;t+=dt;
+    if(h>apo)apo=h;if(v>vmax)vmax=v;
+    if(burning){
+      if(o.failSt===si&&(st.prop-prop)/st.prop>=o.failFrac){out='fail';failT=t;break}
+      if(prop<=(si===last?lastLim:0)+1e-6){
+        if(si<last){m-=st.dry+Math.max(prop,0);si++;prop=B.stages[si].prop;ev.push({t,k:'sep'});if(kick&&si===last)phaseA=true}
+        else{
+          burning=false;sep=true;m=w.m;ev.push({t,k:'cut'});
+          if(!lifted){out='nolift';break}
+          const r2=Math.hypot(x,y),v2=vx*vx+vy*vy,eps=v2/2-MU/r2,hh=x*vy-y*vx;
+          bo={h:r2-RE,v:Math.sqrt(v2),vh:Math.abs(hh)/r2,vc:Math.sqrt(MU/r2),ve:Math.sqrt(2*MU/r2),eps,rp:null,ra:null};if(o.boOnly&&eps>=0){out='bo';break}
+          if(eps>=0){escape=true;tCap=t+2500}
+          else{const a=-MU/(2*eps),e=Math.sqrt(Math.max(0,1+2*eps*hh*hh/(MU*MU)));rp=a*(1-e)-RE;bo.rp=rp;bo.ra=a*(1+e)-RE;bo.T=2*Math.PI*Math.sqrt(a*a*a/MU);if(o.boOnly){out='bo';break}
+            if(rp>120e3){orbit=true;tCap=Math.min(t+2*Math.PI*Math.sqrt(a*a*a/MU),t+9000)}else tCap=Math.max(tCap,Math.min(t+2*Math.PI*Math.sqrt(a*a*a/MU)+600,t+90000))}
+        }
+      }
+    }
+    if(lifted&&Math.hypot(x,y)<RE){
+      const h1=Math.hypot(px,py)-RE,h2=Math.hypot(x,y)-RE,f=h1/(h1-h2);x=px+(x-px)*f;y=py+(y-py)*f;
+      out=sep?'impact':'crash';break;
+    }
+  }
+  if(!out){out=orbit?'orbit':escape?'escape':(lifted?'burnup':'nolift');if(out==='burnup'&&burnT===null)burnT=t}
+  if(out==='impact'&&burnT!==null)out='burnup';
+  pts.push({t,x,y,h:Math.max(0,Math.hypot(x,y)-RE),v:Math.hypot(vx,vy),si,b:burning,sep});
+  return{B,pts,out,range:RE*(a=>a<-1e-9?a+2*Math.PI:a)(Math.atan2(x,y)),apo:orbit&&bo&&bo.ra>apo?bo.ra:apo,maxQ,maxHeat,vRe,vmax,orbit,escape,rp,bo,burnT,failT,failSt:o.failSt,ev,tof:t};
+}
+if(typeof module!=='undefined')module.exports={simulate,build,ENG,WH,effR};
+</script>
+
+<script>
+/* ---------- Játékállapot ---------- */
+const TECH={
+  ball:{g:'Irányítás',n:'Ballisztikai számítógép',d:'Indítás előtt kiszámolja a várható lőtávot, csúcsmagasságot és hőterhelést.',c:15,q:1},
+  comp:{g:'Irányítás',n:'Elektronikus számítógépek',d:'Számítóközpont építhető a Gazdaság lapon.',c:40,q:2,r:'ball'},
+  g1:{g:'Irányítás',n:'Tehetetlenségi irányítás',d:'A szórás a lőtáv 1,2%-áról 0,3%-ára csökken. Automata célzás a tervezőben.',c:30,q:2,r:'ball'},
+  g2:{g:'Irányítás',n:'Csillagkövető korrekció',d:'A szórás a lőtáv 0,04%-a.',c:55,q:3,r:'g1'},
+  g3:{g:'Irányítás',n:'Végfázis-irányítás',d:'A szórás a lőtáv 0,01%-a.',c:90,q:4,r:'g2'},
+  st2:{g:'Hordozó',n:'Fokozatleválasztás',d:'Kétfokozatú rakéták.',c:25,q:2},
+  st3:{g:'Hordozó',n:'Háromfokozatú hordozó',d:'Harmadik fokozat.',c:40,q:2,r:'st2'},
+  alloy:{g:'Hordozó',n:'Könnyű ötvözetek',d:'Minden tartály szerkezeti tömege 25%-kal kisebb.',c:30,q:2},
+  alloy2:{g:'Hordozó',n:'Kompozit tartályok',d:'A szerkezeti tömeg összesen 40%-kal kisebb az eredetinél.',c:70,q:4,r:'alloy'},
+  qa:{g:'Hordozó',n:'Minőségbiztosítás',d:'Minden hajtóműtípus megbízhatósága azonnal 5 százalékponttal nő.',c:30,q:2},
+  serial:{g:'Hordozó',n:'Sorozatgyártás',d:'A rakéták 25%-kal olcsóbbak.',c:50,q:3},
+  k1:{g:'Hajtóművek',n:'Kerozin/LOX hajtómű',d:'K-1: 290 s vákuum-impulzus, könnyebb tartályok.',c:35,q:2},
+  hyp:{g:'Hajtóművek',n:'Tárolható hajtóanyag',d:'T-1: feltöltve tárolható, eleve megbízhatóbb, 292 s.',c:35,q:2,r:'k1'},
+  sol2:{g:'Hajtóművek',n:'Kompozit szilárd hajtóanyag',d:'S-2: 1200 kN, 275 s, könnyű ház.',c:45,q:3},
+  k2:{g:'Hajtóművek',n:'Nagynyomású égéstér',d:'K-2: dupla tolóerő, 312 s vákuum-impulzus.',c:50,q:3,r:'k1'},
+  k3:{g:'Hajtóművek',n:'Zárt ciklusú hajtómű',d:'K-3: 1800 kN, 338 s vákuum-impulzus.',c:90,q:4,r:'k2'},
+  h1:{g:'Hajtóművek',n:'Hidrogén/LOX felső fokozat',d:'H-1: 444 s impulzus, de kis tolóerő és terjedelmes tartály.',c:65,q:4,r:'k2'},
+  h2:{g:'Hajtóművek',n:'Nagy hidrogénhajtómű',d:'H-2: 1000 kN hidrogénnel, első fokozatba is.',c:110,q:5,r:'h1'},
+  hs1:{g:'Visszatérés',n:'Hőnyelő pajzs',d:'A visszatérő egység 20 MW/m² csúcs-hőáramot bír ki.',c:20,q:2},
+  hs2:{g:'Visszatérés',n:'Ablációs pajzs',d:'200 MW/m²: interkontinentális sebességről is visszatér.',c:45,q:3,r:'hs1'},
+  matp:{g:'Anyag és energia',n:'Anyagprogram',d:'Megnyitja a hasadóanyag ellátási láncát a Gazdaság lapon.',c:40,q:2},
+  reactor:{g:'Anyag és energia',n:'Reaktortechnika',d:'Atomerőmű építhető.',c:60,q:4,r:'matp'},
+  centr:{g:'Anyag és energia',n:'Centrifuga-technológia',d:'Centrifugatelep építhető.',c:70,q:4,r:'matp'},
+  accel:{g:'Anyag és energia',n:'Gyorsítófizika',d:'Részecskegyorsító építhető.',c:60,q:3},
+  fis1:{g:'Töltetek',n:'Hasadó töltet I',d:'15 kt, 4000 kg. Nehéz első generáció, nagy hordozót kíván.',c:60,q:4,r:'matp'},
+  fis2:{g:'Töltetek',n:'Kompakt hasadó töltet',d:'50 kt, 1000 kg.',c:70,q:4,r:'fis1',rt:'fis1'},
+  fis3:{g:'Töltetek',n:'Nagy hatóerejű hasadó töltet',d:'150 kt, 1200 kg.',c:80,q:4,r:'fis2',rt:'fis2'},
+  fus1:{g:'Töltetek',n:'Fúziós töltet I',d:'1 Mt, 2500 kg.',c:120,q:6,r:'fis2',rt:'fis2'},
+  fus2:{g:'Töltetek',n:'Kompakt fúziós töltet',d:'500 kt, 700 kg.',c:110,q:5,r:'fus1',rt:'fus1'},
+  fus3:{g:'Töltetek',n:'Nagy fúziós töltet',d:'5 Mt, 4000 kg.',c:130,q:5,r:'fus1',rt:'fus1'},
+  fus4:{g:'Töltetek',n:'Többmegatonnás kísérleti eszköz',d:'25 Mt, 15 000 kg.',c:160,q:6,r:'fus3',rt:'fus3'},
+  fus5:{g:'Töltetek',n:'Óriás kísérleti eszköz',d:'50 Mt, 27 000 kg. Csak a legnagyobb hordozók bírják el.',c:200,q:6,r:'fus4',rt:'fus4'},
+  radar:{g:'Védelem',n:'Előrejelző radar',d:'Radarlánc építhető.',c:60,q:3},
+  abm:{g:'Védelem',n:'Elfogórakéta',d:'Elfogórakéta-ütegek építhetők.',c:100,q:5,r:'radar'},
+  silo:{g:'Védelem',n:'Megerősített silók',d:'Silóerődítés építhető.',c:50,q:3},
+  sub:{g:'Védelem',n:'Rakétahordozó tengeralattjáró',d:'Tengeralattjáró-flotta építhető.',c:120,q:5,r:'hyp'},
+  mirv:{g:'Védelem',n:'Több robbanófej',d:'Minden rendszeresített rakéta két töltetet juttat célba.',c:110,q:5,r:'g2'},
+  recon:{g:'Védelem',n:'Felderítő műhold',d:'Felderítő műholdak építhetők.',c:70,q:3,rm:'orbit'},
+  f1:{g:'Űrprogram',n:'Óriás hajtómű',d:'F-1: 6800 kN egyetlen égéstérből.',c:120,q:5,r:'k3'},
+  ntr:{g:'Űrprogram',n:'Nukleáris termikus hajtómű',d:'N-1: 850 s vákuum-impulzus felső fokozatba. Nehéz és drága.',c:150,q:6,r:'reactor'},
+  crew:{g:'Űrprogram',n:'Űrkabin',d:'5 tonnás, embert szállító kabin.',c:90,q:4,r:'hs2'},
+  station:{g:'Űrprogram',n:'Űrállomás-modul',d:'20 tonnás modul alacsony pályára.',c:110,q:4,r:'crew'},
+  lunar:{g:'Űrprogram',n:'Holdkomp',d:'15 tonnás teher szökési pályára.',c:140,q:5,r:'station'},
+  he2:{g:'Hagyományos erők',n:'Korszerű robbanóanyag',d:'A hagyományos töltet azonos tömegből 40%-kal nagyobb hatóerőt ad.',c:40,q:3},
+  pgm:{g:'Hagyományos erők',n:'Precíziós hagyományos robbanófej',d:'A hagyományos töltetű rakéták háborúban négyszer hatásosabbak.',c:80,q:4,r:'g2'},
+  mot:{g:'Hagyományos erők',n:'Gépesítés',d:'A hadosztályok 30%-kal erősebbek.',c:40,q:2},
+  jet:{g:'Hagyományos erők',n:'Sugárhajtású repülőgép',d:'Repülőezredek állíthatók fel.',c:60,q:3},
+  fleet:{g:'Hagyományos erők',n:'Óceáni hadiflotta',d:'Flottillák építhetők. Tengeren túli háborúban a flotta szabja meg, hány hadosztály vethető be.',c:70,q:4},
+  sam:{g:'Hagyományos erők',n:'Légvédelmi rakéta',d:'A háborús veszteségeid 25%-kal kisebbek.',c:60,q:3,r:'radar'},
+  ew:{g:'Hagyományos erők',n:'Elektronikai hadviselés',d:'A hagyományos erőid 20%-kal hatásosabbak.',c:80,q:4,r:'comp'},
+  logi:{g:'Hagyományos erők',n:'Katonai logisztika',d:'A csapatok és a rakéták fenntartása 25%-kal olcsóbb.',c:50,q:3},
+  agri:{g:'Polgári fejlesztések',n:'Gépesített mezőgazdaság',d:'Gyorsabb népességnövekedés.',c:40,q:3},
+  chip:{g:'Polgári fejlesztések',n:'Félvezetőipar',d:'Az ipari parkok szintenként további 4 M bevételt adnak.',c:90,q:4,r:'comp'},
+  fusp:{g:'Polgári fejlesztések',n:'Szabályozott fúzió',d:'Az atomerőművek bevétele 50%-kal nő.',c:200,q:8,r:'accel'}
+};
+const MIS=[
+  {id:'alt',k:'alt',h:100,n:'Szuborbitális ugrás',d:'Juttass bármilyen hasznos terhet 100 km fölé.',rw:40,inc:5},
+  {id:'z300',k:'zone',r:300,tol:5,n:'A-lőtér, 300 km',d:'Csapódj be a 300 km-re kijelölt célkörzet 5 km-es sugarán belül.',rw:60,inc:8,req:'alt'},
+  {id:'l10',k:'eco',f:()=>S.launches>=10,n:'Tíz indítás',d:'Hajts végre tíz indítást, bármilyen eredménnyel.',rw:50,inc:5},
+  {id:'rel',k:'eco',f:()=>Object.values(S.rel).some(v=>v>=.95),n:'Kiforrott hajtómű',d:'Érj el 95%-os megbízhatóságot bármelyik hajtóműtípussal.',rw:60,inc:6,req:'alt'},
+  {id:'alt1000',k:'alt',h:1000,n:'Magaslégköri szonda',d:'Juss 1000 km fölé.',rw:70,inc:6,req:'alt'},
+  {id:'p300',k:'zone',r:300,tol:.5,n:'Pontlövés, 300 km',d:'Csapódj be fél kilométeren belül a 300 km-es célnál.',rw:80,inc:8,req:'z300'},
+  {id:'z1500',k:'zone',r:1500,tol:15,n:'B-lőtér, 1500 km',d:'Találd el a célkörzetet 15 km-en belül. Ekkora sebességnél a visszatérő egységnek hőpajzs kell.',rw:100,inc:12,req:'z300'},
+  {id:'test',k:'test',n:'Első kísérleti robbantás',d:'Hajts végre sikeres próbát a Próbatéren egy hasadó töltettel. Ehhez előbb fel kell építened az anyagellátást.',rw:120,inc:15,req:'z300'},
+  {id:'inc100',k:'eco',f:()=>netInc()>=100,n:'Önfenntartó program',d:'Érj el negyedévente 100 M nettó bevételt.',rw:100,inc:0,req:'z1500'},
+  {id:'ero',k:'eco',f:()=>S.bld.ero>0,n:'Atomerőmű a hálózaton',d:'Építs atomerőművet.',rw:80,inc:5,req:'z300'},
+  {id:'gyors',k:'eco',f:()=>S.bld.gyors>0,n:'Gyorsító üzemben',d:'Építs részecskegyorsítót.',rw:80,inc:5,req:'z300'},
+  {id:'mat10',k:'eco',f:()=>S.mat>=10,n:'Stratégiai készlet',d:'Halmozz fel 10 egység hasadóanyagot.',rw:100,inc:8,req:'test'},
+  {id:'k1500',k:'kill',r:1500,n:'Célhajó, 1500 km',d:'A kiszolgált célhajónak a töltet hatássugarán belül kell lennie.',rw:150,inc:15,req:'test'},
+  {id:'z5000',k:'zone',r:5000,tol:25,n:'C-lőtér, 5000 km',d:'Találd el a célkörzetet 25 km-en belül.',rw:200,inc:20,req:'z1500'},
+  {id:'heavy',k:'zone',r:5000,tol:40,minM:4000,n:'Nehéz teher, 5000 km',d:'Juttass legalább 4000 kg-os terhet az 5000 km-es célkörzet 40 km-es sugarába.',rw:180,inc:15,req:'z5000'},
+  {id:'tfus',k:'test',fus:1,n:'Első fúziós próba',d:'Sikeres próba bármelyik fúziós töltettel.',rw:200,inc:20,req:'test'},
+  {id:'k5000',k:'kill',r:5000,n:'Célhajó, 5000 km',d:'A célhajónak 5000 km-ről is a hatássugáron belül kell lennie.',rw:220,inc:20,req:'k1500'},
+  {id:'z9000',k:'zone',r:9000,tol:30,n:'D-lőtér, 9000 km',d:'Találd el a célkörzetet 30 km-en belül. Ablációs pajzs nélkül a teher elég.',rw:250,inc:20,req:'z5000'},
+  {id:'k9000',k:'kill',r:9000,n:'Interkontinentális próba, 9000 km',d:'A célhajónak 9000 km-ről is a hatássugáron belül kell lennie.',rw:300,inc:30,req:'k5000'},
+  {id:'p9000',k:'zone',r:9000,tol:2,n:'Pontlövés, 9000 km',d:'Csapódj be 2 km-en belül a 9000 km-es célnál.',rw:300,inc:25,req:'z9000'},
+  {id:'z12000',k:'zone',r:12000,tol:40,n:'Legnagyobb lőtáv, 12 000 km',d:'Találd el a 12 000 km-es célkörzetet 40 km-en belül.',rw:300,inc:25,req:'z9000'},
+  {id:'t10',k:'test',minY:10000,n:'Megatonnás osztály',d:'Sikeres próba legalább 10 Mt-s eszközzel.',rw:300,inc:25,req:'tfus'},
+  {id:'t50',k:'test',minY:50000,n:'A legnagyobb próba',d:'Sikeres próba az 50 Mt-s eszközzel.',rw:500,inc:30,req:'t10'},
+  {id:'orbit',k:'orbit',n:'Műhold',d:'Állíts pályára egy terhet: a pálya legalacsonyabb pontja legyen 120 km fölött. A Tervezőben válassz pályacélt: legalább két fokozat kell, az utolsó a röppálya csúcsán gyújt újra, és vízszintesen gyorsít.',rw:400,inc:40,req:'alt1000'},
+  {id:'ker',k:'eco',f:()=>S.bld.ker>0,n:'Kereskedelmi indítások',d:'Építs kereskedelmi indítóállást.',rw:100,inc:10,req:'orbit'},
+  {id:'orbH',k:'orbit',minM:2000,n:'Nehéz műhold',d:'Állíts pályára legalább 2000 kg-os terhet.',rw:400,inc:30,req:'orbit'},
+  {id:'orbHi',k:'orbit',minRp:1000,n:'Magas pálya',d:'Olyan pálya, amelynek a legalacsonyabb pontja is 1000 km fölött van.',rw:350,inc:25,req:'orbit'},
+  {id:'esc',k:'escape',n:'Holdszonda',d:'Gyorsíts egy terhet szökési sebességre.',rw:500,inc:40,req:'orbit'},
+  {id:'inc300',k:'eco',f:()=>netInc()>=300,n:'Ipari nagyhatalom',d:'Érj el negyedévente 300 M nettó bevételt.',rw:200,inc:0,req:'inc100'},
+  {id:'pop25',k:'eco',f:()=>popTot()>=25,n:'Huszonötmilliós ország',d:'Növeld a népességet 25 millió fölé.',rw:150,inc:10},
+  {id:'ars5',k:'eco',f:()=>arsN()>=5,n:'Elrettentő erő',d:'Rendszeresíts egy rakétatípust a Tervezőben, és gyárts belőle ötöt a Világ lapon.',rw:150,inc:10,req:'test'},
+  {id:'shield',k:'eco',f:()=>S.bld.abm>=2,n:'Védőernyő',d:'Építs két elfogórakéta-üteget.',rw:200,inc:10},
+  {id:'second',k:'eco',f:()=>S.bld.tenger>0,n:'Második csapás képessége',d:'Állíts hadrendbe tengeralattjáró-flottát.',rw:250,inc:10},
+  {id:'treaty',k:'eco',f:()=>S.riv.some(r=>r.treaty),n:'Első szerződés',d:'Köss fegyverzetkorlátozási szerződést egy riválissal.',rw:250,inc:15},
+  {id:'peace',k:'eco',f:()=>S.riv.every(r=>r.treaty||r.dead),n:'Tartós béke',d:'Minden riválissal szerződés van érvényben.',rw:600,inc:40,req:'treaty'},
+  {id:'crew',k:'orbit',wh:'crew',n:'Ember az űrben',d:'Állítsd pályára az űrkabint.',rw:500,inc:30,req:'orbit'},
+  {id:'station',k:'orbit',wh:'stat',n:'Űrállomás',d:'Állíts pályára egy 20 tonnás modult.',rw:600,inc:40,req:'crew'},
+  {id:'moon',k:'escape',wh:'lun',n:'Holdraszállás',d:'Indítsd szökési pályára a 15 tonnás holdkompot.',rw:1000,inc:60,req:'station'},
+  {id:'ars30',k:'eco',f:()=>arsN()>=30,n:'Rakétaerő',d:'Legyen harminc rakétád hadrendben.',rw:250,inc:15,req:'ars5'},
+  {id:'army10',k:'eco',f:()=>S.mil.army>=10,n:'Tíz hadosztály',d:'Állíts fel tíz hadosztályt a Világ lapon.',rw:120,inc:8},
+  {id:'ally1',k:'eco',f:()=>S.al.some(a=>a.ally),n:'Első szövetséges',d:'Köss szövetséget egy semleges országgal.',rw:150,inc:10},
+  {id:'ally3',k:'eco',f:()=>S.al.every(a=>a.ally),n:'Szövetségi rendszer',d:'Mindhárom semleges ország a szövetségesed.',rw:300,inc:20,req:'ally1'}
+];
+const UNIT={army:{n:'Hadosztály',c:10,up:1},air:{n:'Repülőezred',c:18,up:2,t:'jet'},navy:{n:'Flottilla',c:25,up:2,t:'fleet'}};
+const BLD={
+  uni:{g:'Tudomány és ipar',n:'Műszaki egyetem',d:'Minden új kutatás szintenként egy negyedévvel rövidebb.',c:[30,60,100,150],q:2,up:2},
+  gyar:{g:'Tudomány és ipar',n:'Rakétagyár',d:'A rakéták szintenként 15%-kal olcsóbbak.',c:[50,90],q:3,up:3},
+  ipar:{g:'Tudomány és ipar',n:'Ipari park',d:'Szintenként 10 M bevétel negyedévente.',c:[40,60,80,110,150],q:2,up:0,inc:10},
+  kovet:{g:'Tudomány és ipar',n:'Követőállomás-hálózat',d:'Minden indítás kétszer annyit javít a hajtóművek megbízhatóságán.',c:[40],q:2,up:2},
+  comp:{g:'Tudomány és ipar',n:'Számítóközpont',d:'A becsapódási szórás 30%-kal kisebb.',c:[60],q:3,up:2,t:'comp'},
+  gyors:{g:'Tudomány és ipar',n:'Részecskegyorsító',d:'A töltetkutatás 25%-kal olcsóbb, és minden új kutatás további egy negyedévvel rövidebb.',c:[150],q:6,up:5,t:'accel'},
+  ero:{g:'Energia és anyag',n:'Atomerőmű',d:'Blokkonként 18 M bevétel negyedévente. Működő feldolgozó üzem mellett blokkonként 0,15 egység hasadóanyagot is ad.',c:[120,150,180,220],q:5,up:0,inc:18,t:'reactor'},
+  banya:{g:'Energia és anyag',n:'Saját bánya',d:'Az exportkorlátozás többé nem veti vissza a nyersanyag-szerződést.',c:[70],q:4,up:3,t:'matp'},
+  cent:{g:'Energia és anyag',n:'Centrifugatelep',d:'A hasadóanyag-termelés szintenként 50%-kal nő.',c:[90,140,200],q:4,up:4,t:'centr'},
+  kikoto:{g:'Ország',n:'Tengeri kikötő',d:'Szintenként 8 M bevétel a kereskedelemből, és lassabban nő a feszültség.',c:[50,90],q:3,up:0,inc:8},
+  lakas:{g:'Ország',n:'Lakásprogram',d:'A népesség szintenként gyorsabban nő, a több lakos több adót fizet.',c:[40,70,100],q:3,up:1},
+  korhaz:{g:'Ország',n:'Kórházhálózat',d:'Gyorsabb népességnövekedés, a csapások vesztesége 15%-kal kisebb.',c:[60],q:3,up:2},
+  dipl:{g:'Ország',n:'Diplomáciai testület',d:'Minden riválissal lassabban nő a feszültség, és válságban tárgyalhatsz.',c:[50],q:2,up:3},
+  ker:{g:'Ország',n:'Kereskedelmi indítóállás',d:'12 M bevétel negyedévente műholdindításokból.',c:[80],q:3,up:0,inc:12,m:'orbit'},
+  radar:{g:'Védelem',n:'Előrejelző radarlánc',d:'Riasztáskor a rakétáid egy része még a becsapódás előtt elindulhat. Az elfogórakéták feltétele.',c:[80],q:3,up:3,t:'radar'},
+  abm:{g:'Védelem',n:'Elfogórakéta-üteg',d:'Szintenként 20% eséllyel fog el minden beérkező töltetet.',c:[100,150,220],q:4,up:5,t:'abm'},
+  silo:{g:'Védelem',n:'Megerősített silók',d:'A rakétáid túlélési esélye első csapásnál 30%-ról 60%-ra nő.',c:[90],q:3,up:2,t:'silo'},
+  tenger:{g:'Védelem',n:'Tengeralattjáró-flotta',d:'A rakéták harmada tengeren járőrözik, ahol szinte sebezhetetlen.',c:[200],q:6,up:8,t:'sub'},
+  felder:{g:'Védelem',n:'Felderítő műholdak',d:'Pontos adatok a riválisok erejéről. A fegyverzetkorlátozási szerződés feltétele.',c:[90],q:3,up:3,t:'recon'},
+  ovo:{g:'Védelem',n:'Óvóhelyprogram',d:'A városokat érő csapások vesztesége szintenként 25%-kal kisebb.',c:[70,120],q:4,up:2}
+};
+const MATS={ore:{n:'Nyersanyag-szerződés',c:[15,25,40],q:1,d:'Külső beszállító. Exportkorlátozás bármikor visszavetheti.'},
+  proc:{n:'Feldolgozó üzem',c:[45,70,100],q:3,d:'A legdrágább és leglassabban épülő láncszem.'},
+  qc:{n:'Minősítő labor',c:[25,40,60],q:2,d:'Csak a minősített tétel használható fel.'}};
+const fresh0=()=>({q:0,money:120,income:30,prestige:0,mat:0,tech:{},research:null,mc:{ore:0,proc:0,qc:0},builds:[],halt:0,
+  rel:{a1:.8,sol:.82,k1:.78,k2:.75,h1:.7,hyp:.88,k3:.72,h2:.7,sol2:.85,f1:.7,ntr:.65},tested:{},done:{},v5:1,bld:{},loans:0,launches:0,rural:12,ars:[],crisis:null,arm:'',sn:1,mil:{army:0,air:0,navy:0},emb:0,nukedBy:{},
+  al:[{id:'NY',n:'Nyugati Köztársaság',rel:40,ally:0,conv:6,mx:.12,my:.2},{id:'SZ',n:'Szigetállam',rel:35,ally:0,conv:3,mx:.1,my:.8},{id:'PV',n:'Partvidéki Unió',rel:30,ally:0,conv:5,mx:.65,my:.75}],
+  cities:[{n:'Főváros',p:3.2,mx:.27,my:.51},{n:'Kikötőváros',p:1.8,mx:.21,my:.57},{n:'Bányaváros',p:1.1,mx:.33,my:.45},{n:'Egyetemváros',p:.9,mx:.23,my:.46}],
+  riv:[{id:'N',n:'Északi Szövetség',dist:5000,pop:60,eco:1,ars:0,y:20,ymax:2000,def:0,dmax:.35,tens:25,aggr:.6,gr:.5,cap:30,t0:4,t:0,conv:12,cg:.15,ccap:30,war:0,front:0,emb:0,treaty:0,dead:0,mx:.56,my:.23},
+    {id:'K',n:'Keleti Unió',dist:9000,pop:120,eco:1,ars:0,y:50,ymax:10000,def:0,dmax:.5,tens:30,aggr:.8,gr:.8,cap:60,t0:2,t:0,conv:22,cg:.25,ccap:60,war:0,front:0,emb:0,treaty:0,dead:0,mx:.81,my:.41},
+    {id:'D',n:'Déli Liga',dist:1500,pop:25,eco:1,ars:0,y:15,ymax:300,def:0,dmax:.2,tens:15,aggr:.45,gr:.25,cap:12,t0:10,t:0,conv:5,cg:.08,ccap:14,war:0,front:0,emb:0,treaty:0,dead:0,mx:.41,my:.76}],tab:'prog',log:['Megnyílt a lőtér. Az első feladat: 100 km fölé jutni.'],
+  design:{stages:[{eng:'a1',n:1,prop:6000}],wh:'inst',convMass:500,target:0,pitch:20,cutoff:100}});
+const fresh=()=>Object.assign(fresh0(),{name:'',diff:'n',opt:{snd:1,tips:1},st:{ok:0,fail:0,streak:0,best:0,maxApo:0,maxRng:0,maxY:0,miss:null,nukes:0,wins:0},ach:{},hist:[],bp:[],evd:{},ev:null,evc:0,ends:{},news:null});
+let S=fresh(),PB=null,resetArm=false,depMsg='';
+const $=id=>document.getElementById(id);
+const f0=n=>Math.round(n).toLocaleString('hu-HU'),f1=n=>n.toLocaleString('hu-HU',{minimumFractionDigits:1,maximumFractionDigits:1}),f2=n=>n.toLocaleString('hu-HU',{minimumFractionDigits:2,maximumFractionDigits:2});
+const heatLimit=()=>S.tech.hs2?2e8:S.tech.hs1?2e7:2.5e6;
+const cepFrac=()=>(S.tech.g3?1e-4:S.tech.g2?4e-4:S.tech.g1?3e-3:1.2e-2)*(S.bld.comp?.7:1);
+const sfm=()=>S.tech.alloy2?.6:S.tech.alloy?.75:1;
+function bld(){CONVK=S.tech.he2?.7:.5;const B=build(S.design,sfm());B.cost*=(S.tech.serial?.75:1)*(1-.15*(S.bld.gyar||0));return B}
+const popTot=()=>S.cities.reduce((a,c)=>a+c.p,S.rural);
+const arsN=()=>S.ars.reduce((a,t)=>a+t.cnt,0);
+const bldInc=()=>Object.entries(BLD).reduce((a,[k,b])=>a+(S.emb>0&&(k==='kikoto'||k==='ker')?0:b.inc||0)*(S.bld[k]||0),0)+(S.tech.chip?4*(S.bld.ipar||0):0)+(S.tech.fusp?9*(S.bld.ero||0):0);
+const tradeInc=()=>(S.emb>0?0:15)+6*S.al.filter(a=>a.ally).length;
+const milUp=()=>Math.ceil((S.mil.army+2*S.mil.air+2*S.mil.navy+arsN()*.5)*(S.tech.logi?.75:1));
+const upkeep=()=>2*(S.mc.ore+S.mc.proc+S.mc.qc)+Object.entries(BLD).reduce((a,[k,b])=>a+b.up*(S.bld[k]||0),0)+milUp();
+const netInc=()=>S.income+bldInc()+tradeInc()+Math.round(popTot()*.8)+Math.floor(S.prestige/10)-5*S.loans-upkeep();
+const tcost=k=>Math.round(TECH[k].c*(S.bld.gyors&&WH[k]&&WH[k].nuc?.75:1));
+const tq=k=>Math.max(1,TECH[k].q-(S.bld.uni||0)-(S.bld.gyors?1:0));
+const isOpen=m=>!S.done[m.id]&&(!m.req||S.done[m.req]);
+function check(x){const won=[];for(const m of MIS){if(!isOpen(m))continue;let ok=false;
+  if(m.k==='eco')ok=m.f();
+  else if(m.k==='test')ok=Object.keys(S.tested).some(k=>WH[k]&&WH[k].nuc&&(!m.fus||WH[k].fus)&&(!m.minY||WH[k].y>=m.minY));
+  else if(x.r){const r=x.r,w=r.B.w,hit=x.miss!==null&&x.d.target===m.r;
+    if(m.k==='alt')ok=r.apo>=m.h*1e3&&r.out!=='nolift';
+    else if(m.k==='zone')ok=hit&&Math.abs(x.miss)<=m.tol&&(!m.minM||w.m>=m.minM);
+    else if(m.k==='kill')ok=hit&&w.y>0&&Math.abs(x.miss)<=effR(w.y);
+    else if(m.k==='orbit')ok=r.out==='orbit'&&(!m.minM||w.m>=m.minM)&&(!m.minRp||r.rp>=m.minRp*1e3)&&(!m.wh||x.d.wh===m.wh);
+    else if(m.k==='escape')ok=r.out==='escape'&&(!m.wh||x.d.wh===m.wh);}
+  if(ok){S.done[m.id]=1;S.money+=m.rw;S.income+=m.inc;S.prestige+=10;log('Feladat teljesítve: '+m.n+'.');won.push(m);if(!x.r&&!x.test)toast('Feladat teljesítve: '+m.n)}}
+  return won}
+const gauss=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
+const qName=()=>`${1957+Math.floor(S.q/4)} · ${['I','II','III','IV'][S.q%4]}. negyedév`;
+const yTxt=y=>y>=1000?f1(y/1000)+' Mt':y>=1?f0(y)+' kt':f0(y*1e6)+' kg TNT';
+function save(){try{localStorage.setItem('loter1',JSON.stringify(S))}catch(e){}}
+function log(t){S.log.unshift(qName().slice(0,4)+': '+t);S.log.length=Math.min(S.log.length,8);histHook(t)}
+const matRate=()=>S.halt>0?0:0.4*Math.min(S.mc.ore,S.mc.proc,S.mc.qc)*(1+.5*(S.bld.cent||0))+(S.mc.proc>0?.15*(S.bld.ero||0):0);
+
+/* ---------- Megjelenítés ---------- */
+let wl=0;const RM=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function fit(id,ar){const cv=$(id),dpr=window.devicePixelRatio||1,W=cv.clientWidth||340,H=W*ar;cv.width=W*dpr;cv.height=H*dpr;const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);return[c,W,H]}
+function render(){
+  CONVK=S.tech.he2?.7:.5;
+  $('stat').innerHTML=`<span><b>${qName()}</b></span><span>Keret <b>${f0(S.money)} M</b></span><span>Nettó <b>${netInc()>=0?'+':''}${netInc()} M</b>/n.év</span>${S.tech.matp?`<span>Hasadóanyag <b>${f1(S.mat)}</b></span>`:''}<span>Presztízs <b>${S.prestige}</b></span>`;
+  const tabs=[['prog','Program'],['terv','Tervező'],['kut','Kutatás'],['anyag','Gazdaság'],['vilag','Világ'],['proba','Próba']];
+  $('tabs').innerHTML=tabs.map(([k,n])=>`<button data-a="tab" data-k="${k}" aria-current="${S.tab===k}">${n}</button>`).join('');
+  $('main').innerHTML=({prog:vProg,terv:vTerv,kut:vKut,anyag:vAnyag,vilag:vVilag,proba:vProba})[S.tab]();
+  if(S.tab==='terv')updRo();
+  if(S.tab==='prog'){const[c,W,H]=fit('hero',.5);drawHero(c,W,H)}
+  if(S.tab==='vilag'){const[c,W,H]=fit('wmap',.75),id=++wl,t0=performance.now(),tick=n=>{if(id!==wl||S.tab!=='vilag'||PB)return;drawWorld(c,W,H,Math.max(0,(n-t0)/1000));requestAnimationFrame(tick)};drawWorld(c,W,H,0);if(!RM)requestAnimationFrame(tick)}
+  renderExt();
+}
+function vProg(){
+  const op=MIS.filter(isOpen),dn=Object.keys(S.done).length;
+  let h=`<section class="card hero"><canvas id="hero"></canvas><div class="herot"><div class="eyebrow">${qName()}</div><div class="big">${f1(popTot())} M lakos</div><div class="prog"><i style="width:${Math.round(dn/MIS.length*100)}%"></i></div><div class="eyebrow">${dn} / ${MIS.length} feladat</div></div></section>`;
+  if(S.over)h+=`<section class="card" style="border-color:var(--bad)"><div class="eyebrow">Vége</div><h2>Az ország összeomlott</h2><p>A népesség 8 millió alá esett, a program nem folytatható.</p><button class="act" data-a="reset">${resetArm?'Koppints újra az új játékhoz':'Új játék'}</button></section>`;
+  h+=crisisCard()+evCard()+tipCard()+newsCard()+`<section class="card"><h2>Nyitott feladatok</h2>`;
+  h+=op.length?op.map(m=>`<div class="tech"><div class="row"><h3>${m.n}</h3><span class="pill go">+${m.rw} M${m.inc?`, bevétel +${m.inc}`:''}</span></div><p class="dim">${m.d}</p></div>`).join(''):`<p>Minden feladat kész. A lőtér nyitva marad: kísérletezz tovább szabadon.</p>`;
+  h+=`</section><section class="card"><h2>Negyedév</h2>`;
+  h+=S.research?`<p>Kutatás: <b>${TECH[S.research.id].n}</b>, még ${S.research.left} negyedév.</p>`:`<p class="dim">Nincs futó kutatás. A kutatás és az építkezés csak a negyedév lezárásával halad.</p>`;
+  if(S.builds.length)h+=`<p>Építés: ${S.builds.map(b=>`${(b.b?BLD:MATS)[b.k].n} (${b.left} n.év)`).join(', ')}</p>`;
+  h+=`<div class="grid"><div><span>Alapkeret</span>+${S.income} M</div><div><span>Létesítmények</span>+${bldInc()} M</div><div><span>Adó</span>+${Math.round(popTot()*.8)} M</div><div><span>Kereskedelem</span>+${tradeInc()} M${S.emb>0?' (embargó)':''}</div><div><span>Presztízs</span>+${Math.floor(S.prestige/10)} M</div><div><span>Fenntartás, kamat</span>−${upkeep()+5*S.loans} M</div></div>`;
+  if(S.tech.matp)h+=`<p class="dim">Hasadóanyag-termelés: ${f2(matRate())} egység/negyedév${S.halt>0?`, ellenőrzés miatt még ${S.halt} negyedévig áll`:''}.</p>`;
+  h+=`<button class="act" data-a="endq" ${S.crisis||S.ev||S.over?'disabled':''}>Negyedév lezárása</button></section>`;
+  h+=`<section class="card"><h2>Napló</h2><div class="log">${S.log.map(l=>`<div>${l}</div>`).join('')}</div></section>`;
+  h+=`<section class="card"><h3>Hogyan működik</h3><p class="dim">A Tervezőben rakod össze a rakétát. A repülést valódi egyenletek számolják: Ciolkovszkij-egyenlet, magassággal változó tolóerő, légellenállás, távolsággal gyengülő gravitáció, visszatérési hőterhelés. A Föld forgását a modell elhanyagolja. A töltetek és a létesítmények belső működése nincs modellezve, csak a tömegük, hatóerejük, költségük és hozamuk.</p><button class="sec" data-a="reset">${resetArm?'Új program indítása? Koppints újra':'Új játék'}</button></section>`;
+  return h;
+}
+const propToV=p=>Math.round(100*Math.log(p/1000)/Math.log(2000)),vToProp=v=>Math.round(1000*Math.pow(2000,v/100)/100)*100;
+function vTerv(){
+  const d=S.design,maxSt=1+(S.tech.st2?1:0)+(S.tech.st3?1:0);
+  let h=`<section class="card"><h2>Hordozó</h2><div class="rk"><canvas id="mini"></canvas><div class="stg">`;
+  d.stages.forEach((s,i)=>{
+    h+=`<div class="st"><div class="stl"><span>${i+1}. fokozat</span>${i>0&&i===d.stages.length-1?`<button class="x" data-a="rmst">törlés</button>`:''}</div>
+    <select id="e${i}" data-s="eng" data-k="${i}" aria-label="Hajtómű">${Object.entries(ENG).filter(([k,e])=>!e.t||S.tech[e.t]).map(([k,e])=>`<option value="${k}" ${k===s.eng?'selected':''}>${e.n} · megb. ${Math.round(S.rel[k]*100)}%</option>`).join('')}</select>
+    <label for="n${i}">Hajtóművek száma <output id="on${i}">${s.n}</output></label><input type="range" id="n${i}" min="1" max="9" step="1" value="${s.n}" data-i="n" data-k="${i}">
+    <label for="p${i}">Hajtóanyag <output id="op${i}">${f0(s.prop)} kg</output></label><input type="range" id="p${i}" min="0" max="100" step="1" value="${propToV(s.prop)}" data-i="prop" data-k="${i}"></div>`;
+  });
+  if(d.stages.length<maxSt)h+=`<button class="sec" data-a="addst">Fokozat hozzáadása</button>`;
+  else if(maxSt<3)h+=`<p class="dim">Több fokozathoz kutatás kell.</p>`;
+  h+=`</div></div></section>`;
+  h+=`<section class="card"><h2>Hasznos teher és cél</h2><select id="wh" data-s="wh" aria-label="Hasznos teher">
+    <option value="inst" ${d.wh==='inst'?'selected':''}>Műszercsomag · 300 kg</option><option value="sat" ${d.wh==='sat'?'selected':''}>Nehéz műszeres teher · 2500 kg</option>${Object.entries(WH).filter(([k,w])=>w.t&&S.tech[w.t]).map(([k,w])=>`<option value="${k}" ${d.wh===k?'selected':''}>${w.n} · ${f0(w.m)} kg</option>`).join('')}<option value="conv" ${d.wh==='conv'?'selected':''}>Hagyományos töltet</option>
+    ${Object.entries(WH).filter(([k,w])=>w.nuc&&S.tech[k]).map(([k,w])=>`<option value="${k}" ${d.wh===k?'selected':''} ${S.tested[k]?'':'disabled'}>${w.n} · ${yTxt(w.y)} · ${f0(w.m)} kg${S.tested[k]?'':' (előbb próba kell)'}</option>`).join('')}</select>`;
+  if(d.wh==='conv')h+=`<label for="cm">Töltet tömege <output id="ocm">${f0(d.convMass)} kg</output></label><input type="range" id="cm" min="200" max="8000" step="50" value="${d.convMass}" data-i="convMass">`;
+  h+=`<select id="tg" data-s="target" aria-label="Cél">${[0,300,1500,5000,9000,12000].map(r=>`<option value="${r}" ${d.target===r?'selected':''}>${r?`Cél ${f0(r)} km-re`:'Nincs kijelölt cél (magassági vagy pályára állító repülés)'}</option>`).join('')}</select>`;
+  if(!d.target)h+=`<select id="gl" data-s="goal" aria-label="Pályacél">${[['','Nincs pályacél (magassági repülés)'],['orb','Pályacél: alacsony pálya, perigeum 120 km fölött'],['hi','Pályacél: magas pálya, perigeum 1000 km fölött'],['esc','Pályacél: szökési pálya']].map(([k,n])=>`<option value="${k}" ${(d.goal||'')===k?'selected':''}>${n}</option>`).join('')}</select><p class="dim">Pályára állításnál az utolsó fokozat két részletben ég. Először a beállított dőlésszöggel addig gyorsít, amíg a röppálya csúcsa el nem éri a célmagasságot (alacsony pályánál 180, magasnál 1060 km); ha az alsó fokozatok már elég magasra dobták, ez kimarad. Aztán leáll, a csúcsig szabadon repül, ott újragyújt, és vízszintesen gyorsít, közben épp annyit tol felfelé, hogy ne süllyedjen. Az utolsó fokozat leállítása azt szabja meg, mennyire nyúlik el a pálya. A Repülési program kártyán választhatod az egyszeri, leválás utáni gyújtást is; szökési célnál mindig az megy. Az automata célzás mindent beállít.</p>`;
+  h+=`</section>`;
+  h+=`<section class="card"><h2>Repülési program</h2>
+    <label for="pi">Dőlésszög a függőlegestől <output id="opi">${f1(d.pitch)}°</output></label><input type="range" id="pi" min="0" max="90" step="0.5" value="${d.pitch}" data-i="pitch">
+    <label for="cu">Utolsó fokozat leállítása <output id="ocu">${f2(d.cutoff)}%</output></label><input type="range" id="cu" min="10" max="100" step="0.1" value="${d.cutoff}" data-i="cutoff">
+    ${!d.target&&(d.goal==='orb'||d.goal==='hi')&&d.stages.length>1?`<select id="ig" data-s="ign" aria-label="Utolsó fokozat gyújtása"><option value="" ${d.ign==='now'?'':'selected'}>Utolsó fokozat: emelés, majd újragyújtás a csúcson</option><option value="now" ${d.ign==='now'?'selected':''}>Utolsó fokozat: egyetlen égés a leválás után</option></select>`:''}
+    <div class="fine"><button class="sec" data-a="fine" data-k="-0.02">−0,02%</button><button class="sec" data-a="fine" data-k="0.02">+0,02%</button><button class="sec" data-a="aim" ${S.tech.g1&&(d.target||d.goal)?'':'disabled'}>Automata célzás</button></div>
+    <p class="dim">A rakéta 8 másodpercig függőlegesen emelkedik, aztán fokonként egy másodperc alatt dől a beállított szögig; rövid égésű első fokozatnál ez arányosan gyorsabb, hogy a szög az égés 60%-áig meglegyen. A lőtávot a dőlésszög és az égésidő együtt adja.</p></section>`;
+  h+=`<section class="card" id="ro"></section>`+bpCard();
+  return h;
+}
+function updRo(){
+  const d=S.design,B=bld(),w=B.w;let h=`<h2>Számított adatok</h2><div class="grid">
+    <div><span>Starttömeg</span>${f1(B.m0/1000)} t</div><div><span>Tolóerő/súly</span>${f2(B.twr)}</div>
+    <div><span>Ideális Δv</span>${f0(B.dv)} m/s</div><div><span>Költség</span>${f1(B.cost)} M</div>
+    <div><span>Hatóerő</span>${w.y?yTxt(w.y):'nincs'}</div><div><span>Hatássugár</span>${w.y?f2(effR(w.y))+' km':'nincs'}</div></div>`;
+  if(B.twr<1)h+=`<p><span class="pill bad">Nem emelkedik el</span> A tolóerő kisebb a súlynál. Több hajtómű vagy kevesebb hajtóanyag kell.</p>`;
+  if(S.tech.ball){
+    const r=simulate(d,{alloy:sfm(),heatLimit:heatLimit()});
+    h+=`<div class="eyebrow">Előrejelzés szórás és hiba nélkül</div><div class="grid">
+      <div><span>Lőtáv</span>${r.out==='orbit'||r.out==='escape'?'nincs':f1(r.range/1000)+' km'}</div><div><span>Csúcsmagasság</span>${f0(r.apo/1000)} km</div>
+      <div><span>Hőáram</span>${f1(r.maxHeat/1e6)} MW/m²</div><div><span>Pajzs határa</span>${f1(heatLimit()/1e6)} MW/m²</div></div>
+      <p>${{impact:d.target?`Eltérés a céltól: <b>${f1(r.range/1000-d.target)} km</b>. Várható szórás: ±${f1(r.range*cepFrac()/1000)} km.`:'Ballisztikus pálya, becsapódással.',burnup:'<span class="pill bad">Elég a visszatéréskor</span> Erősebb hőpajzs vagy laposabb, lassabb pálya kell.',orbit:`<span class="pill ok">Pályára áll</span> Perigeum ${f0(r.rp/1000)} km.`,escape:'<span class="pill ok">Szökési pálya</span>',crash:'<span class="pill bad">Hajtott szakaszban lezuhan</span>',nolift:'<span class="pill bad">Nem emelkedik el</span>'}[r.out]||''}</p>`;
+    if(!d.target&&r.bo){const b=r.bo,km=x=>f0(x/1000)+' km';
+      h+=`<div class="eyebrow">Pályaadatok az égés végén</div><div class="grid">
+      <div><span>Magasság</span>${km(b.h)}</div><div><span>Sebesség</span>${f0(b.v)} m/s</div>
+      <div><span>Ebből vízszintes</span>${f0(b.vh)} m/s</div><div><span>Körpályához kell</span>${f0(b.vc)} m/s</div>
+      <div><span>Szökéshez kell</span>${f0(b.ve)} m/s</div><div><span>Perigeum</span>${b.rp===null?'nincs (nyílt pálya)':b.rp<0?km(b.rp)+' (felszín alatt)':km(b.rp)}</div>
+      <div><span>Apogeum</span>${b.ra===null?'nincs':km(b.ra)}</div><div><span>Keringési idő</span>${b.rp!==null&&b.rp>120e3?f0(b.T/60)+' perc':'nincs'}</div></div>${d.goal?`<p>${goalTxt(b,d.goal)}</p>`:'<p class="dim">A pályához a vízszintes sebességnek el kell érnie a körpályához kellőt, és a perigeumnak 120 km fölé kell kerülnie. Válassz pályacélt a Hasznos teher és cél kártyán, és kiírom, mennyi hiányzik.</p>'}`}
+    else if(!d.target&&d.goal)h+=`<p><span class="pill bad">Hiányzik</span> A rakéta nem jut el az utolsó fokozat leállításáig, ezért nincs pályaadat.</p>`;
+  }else h+=`<p class="dim">Lőtáv-előrejelzéshez kutasd ki a ballisztikai számítógépet. Addig csak a Δv-ből becsülhetsz.</p>`;
+  const prob=launchBlock(B);
+  h+=`<button class="act" data-a="launch" ${prob?'disabled':''}>Indítás · ${f1(B.cost)} M</button>${prob?`<p class="dim">${prob}</p>`:''}
+    <button class="sec" data-a="deploy" ${w.y&&S.ars.length<8?'':'disabled'}>Típus rendszeresítése</button>${depMsg?`<p>${depMsg}</p>${depMsg.includes('pill bad')?'':`<button class="sec" data-a="tab" data-k="vilag">Gyártás a Világ lapon</button>`}`:''}<p class="dim">${!w.y?'Műszeres vagy űrteherrel nem lehet rendszeresíteni: válassz töltetet a Hasznos teher listából.':S.ars.length>=8?'Nyolc típus a felső határ. Egy legyártott példány nélküli típust a Világ lapon törölhetsz.':'A töltettel szerelt rakétát hadrendbe veheted. Gyártani a Világ lapon lehet, ott számít bele az elrettentésbe.'}${S.ars.length?` Rendszeresített típusok: ${S.ars.map(a=>`${a.n} (${f0(a.rng)} km, ${a.cnt} db)`).join(', ')}.`:''}</p>`;
+  $('ro').innerHTML=h;
+  const cv=$('mini'),dpr=window.devicePixelRatio||1;cv.width=84*dpr;cv.height=220*dpr;const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,84,220);
+  drawRocket(c,B,0,42,212,200,{nose:w.nuc?'#c8372b':'#ff8a2b'});
+}
+function goalTxt(b,g){const km=x=>f0(x/1000)+' km',ok='<span class="pill ok">A cél teljesül</span> ',bad='<span class="pill bad">Hiányzik</span> ';
+  if(g==='esc')return b.eps>=0?ok+`A sebesség ${f0(b.v-b.ve)} m/s-mal a szökési fölött van.`:bad+`A szökéshez még ${f0(b.ve-b.v)} m/s kell az égés végén. Több Δv vagy nagyobb dőlésszög segít.`;
+  const need=g==='hi'?1000e3:120e3;
+  if(b.eps>=0)return'<span class="pill go">Túl gyors</span> A teher szökési pályára kerül. Állítsd lejjebb az utolsó fokozat leállítását, vagy bízd az automata célzásra: az az égésidőt is beállítja.';
+  if(b.rp>=need)return ok+`Perigeum ${km(b.rp)}, a tartalék ${km(b.rp-need)}.`;
+  let t=bad+`A perigeum ${km(b.rp)}, a cél ${km(need)}: még ${km(need-b.rp)} hiányzik.`;
+  if(b.h<need)t+=` Az utolsó fokozat ${km(b.h)} magasan végez, és a perigeum ennél nem lehet magasabb. Kisebb dőlésszöggel magasabbra kerül a röppálya csúcsa.`;
+  else if(b.vh<b.vc)t+=` Vízszintes sebességből ${f0(b.vc-b.vh)} m/s hiányzik a körpályához. Erősebb utolsó fokozat kell, vagy nagyobb dőlésszög, hogy alacsonyabb pályával is beérd.`;
+  else t+=' A pálya túl elnyúlt, a mélypontja alacsony: kisebb dőlésszöggel magasabbra kerül a gyújtás.';
+  return t}
+function launchBlock(B){const w=B.w,d=S.design;
+  if(S.money<B.cost)return'Nincs elég keret.';
+  if(w.nuc&&!S.tested[d.wh])return'Ezt a töltetet előbb ki kell próbálni a Próbatéren.';
+  if(w.nuc&&S.mat<w.mat)return`Ehhez ${w.mat} egység hasadóanyag kell, ${f1(S.mat)} van.`;
+  return'';}
+function vKut(){
+  let h=`<section class="card"><h2>Kutatás</h2><p class="dim">Egyszerre egy téma futhat. A költséget induláskor fizeted, az eredmény a megadott számú negyedév múlva érkezik.</p></section>`,g='';
+  for(const[k,t]of Object.entries(TECH)){
+    if(t.g!==g){h+=(g?'</section>':'')+`<section class="card"><h2>${t.g}</h2>`;g=t.g}
+    const done=S.tech[k],run=S.research&&S.research.id===k,lock=(t.r&&!S.tech[t.r])||(t.rt&&!S.tested[t.rt])||(t.rm&&!S.done[t.rm]);
+    h+=`<div class="tech"><div class="row"><h3>${t.n}</h3>${done?'<span class="pill ok">kész</span>':run?`<span class="pill go">még ${S.research.left} n.év</span>`:lock?`<span class="pill">zárolva</span>`:`<span class="pill">${tcost(k)} M · ${tq(k)} n.év</span>`}</div><p class="dim">${t.d}${lock&&!done?` Előfeltétel: ${t.rm?'saját műhold pályán':t.rt&&S.tech[t.r]?TECH[t.rt].n+' sikeres próbája':TECH[t.r].n}.`:''}</p>
+    ${!done&&!run&&!lock?`<button class="sec" data-a="res" data-k="${k}" ${S.research||S.money<tcost(k)?'disabled':''}>Indítás</button>`:''}</div>`;
+  }
+  return h+'</section>';
+}
+function vAnyag(){
+  let h=`<section class="card"><h2>Gazdaság</h2><p class="dim">Nettó bevétel ${netInc()} M negyedévente, ebből fenntartás ${upkeep()} M. Adó a ${f1(popTot())} millió lakos után: ${Math.round(popTot()*.8)} M.</p>`,g='';
+  for(const[k,b]of Object.entries(BLD)){
+    if(b.g!==g){h+=`</section><section class="card"><h2>${b.g}</h2>`;g=b.g}
+    const lv=S.bld[k]||0,run=S.builds.find(x=>x.b&&x.k===k),lock=(b.t&&!S.tech[b.t])||(b.m&&!S.done[b.m]),max=b.c.length;
+    h+=`<div class="tech"><div class="row"><h3>${b.n}</h3><span class="pill ${lv?'ok':''}">${lv}/${max}</span></div><p class="dim">${b.d}${b.up?` Fenntartás szintenként ${b.up} M.`:''}${lock?` Előfeltétel: ${b.t?TECH[b.t].n+' kutatása':'műhold pályára állítása'}.`:''}</p>
+    ${run?`<span class="pill go">épül, még ${run.left} n.év</span>`:lv>=max||lock?'':`<button class="sec" data-a="bld" data-k="${k}" ${S.money<b.c[lv]?'disabled':''}>Építés · ${b.c[lv]} M · ${b.q} n.év</button>`}</div>`;
+  }
+  h+=`</section><section class="card"><h2>Pénzügy</h2>
+    <div class="tech"><div class="row"><h3>Államkötvény</h3><span class="pill">${S.loans}/3</span></div><p class="dim">Azonnal 80 M, cserébe negyedévente 5 M kamat, amíg 100 M-ért vissza nem váltod.</p><div class="fine"><button class="sec" data-a="loan" ${S.loans>=3?'disabled':''}>Kibocsátás · +80 M</button><button class="sec" data-a="repay" ${!S.loans||S.money<100?'disabled':''}>Visszaváltás · 100 M</button></div></div>
+    <div class="tech"><div class="row"><h3>Sajtókampány</h3><span class="pill">15 M</span></div><p class="dim">5 presztízspontot ad. Minden 10 presztízspont 1 M bevételt hoz negyedévente.</p><button class="sec" data-a="press" ${S.money<15?'disabled':''}>Kampány indítása</button></div></section>`;
+  if(!S.tech.matp)return h+`<section class="card"><h2>Anyagellátás</h2><p>A hasadóanyag a program legszűkebb keresztmetszete. Az ellátási lánc az Anyagprogram kutatásával nyílik meg.</p></section>`;
+  const mn=Math.min(S.mc.ore,S.mc.proc,S.mc.qc);
+  h+=`<section class="card"><h2>Ellátási lánc</h2><p class="dim">A termelést mindig a leggyengébb láncszem szabja meg: szintenként 0,4 egység negyedévente, amit a centrifugatelep szoroz. Minden szint negyedévente 2 M fenntartásba kerül.</p><div class="grid"><div><span>Készlet</span>${f1(S.mat)} egység</div><div><span>Termelés</span>${f2(matRate())}/n.év</div></div>${S.halt>0?`<p><span class="pill bad">Ellenőrzés</span> A termelés még ${S.halt} negyedévig áll.</p>`:''}`;
+  for(const[k,m]of Object.entries(MATS)){
+    const lv=S.mc[k],b=S.builds.find(x=>!x.b&&x.k===k);
+    h+=`<div class="tech"><div class="row"><h3>${m.n}</h3><span class="pill ${lv===mn&&lv<3?'go':''}">${lv}. szint${lv===mn&&lv<3?' · szűk keresztmetszet':''}</span></div><div class="bar">${[0,1,2].map(i=>`<i class="${i<lv?(lv===mn?'min':'on'):''}"></i>`).join('')}</div><p class="dim">${m.d}</p>
+    ${b?`<span class="pill go">bővítés folyamatban, ${b.left} n.év</span>`:lv<3?`<button class="sec" data-a="mat" data-k="${k}" ${S.money<m.c[lv]?'disabled':''}>Bővítés · ${m.c[lv]} M · ${m.q} n.év</button>`:'<span class="pill ok">teljes kapacitás</span>'}</div>`;
+  }
+  return h+'</section>';
+}
+function vProba(){
+  const d=S.design;
+  let h=`<section class="card"><h2>Próbatér</h2><p class="dim">Álló helyzetű kísérleti robbantás uszályra szerelt eszközzel, lakatlan tengeri körzetben. Új töltettípus csak sikeres próba után szerelhető rakétára.</p>
+  <div class="tech"><div class="row"><h3>Hagyományos töltet</h3><span class="pill">1 M</span></div><label for="cm2">Tömeg <output id="ocm">${f0(d.convMass)} kg</output></label><input type="range" id="cm2" min="200" max="8000" step="50" value="${d.convMass}" data-i="convMass"><button class="sec" data-a="test" data-k="conv" ${S.money<1?'disabled':''}>Próbarobbantás</button></div>`;
+  for(const[k,w]of Object.entries(WH))if(w.nuc){
+    const has=S.tech[k];
+    h+=`<div class="tech"><div class="row"><h3>${w.n}</h3>${!has?'<span class="pill">nincs kifejlesztve</span>':S.tested[k]?'<span class="pill ok">minősítve</span>':'<span class="pill go">próbára vár</span>'}</div>
+    ${has?`<p class="dim">Egy próba ${w.mat} egység hasadóanyagba és 10 M-be kerül. Az első próba sikere nem biztos.</p><button class="sec" data-a="test" data-k="${k}" ${S.money<10||S.mat<w.mat?'disabled':''}>Kísérleti robbantás</button>`:''}</div>`;
+  }
+  h+=`</section><section class="card"><h2>Töltetek összevetése</h2><div class="scroll"><table><tr><th>Típus</th><th>Hatóerő</th><th>Tömeg</th><th>Hatássugár</th><th>kt/tonna</th></tr>
+  <tr><td>Hagyományos</td><td>${yTxt(d.convMass*CONVK/1e6)}</td><td>${f0(d.convMass)} kg</td><td>${f2(effR(d.convMass*CONVK/1e6))} km</td><td>${(CONVK/1000).toLocaleString('hu-HU',{maximumFractionDigits:5})}</td></tr>
+  ${Object.values(WH).filter(w=>w.nuc).map(w=>`<tr><td>${w.n}</td><td>${yTxt(w.y)}</td><td>${f0(w.m)} kg</td><td>${f2(effR(w.y))} km</td><td>${f1(w.y/(w.m/1000))}</td></tr>`).join('')}</table></div>
+  <p class="dim">A hatássugár a hatóerő köbgyökével nő: ezerszeres energia csak tízszeres sugarat ad. Ezért számít annyit a pontosság.</p></section>`;
+  return h;
+}
+
+/* ---------- Műveletek ---------- */
+/* ---------- Világ ---------- */
+const HOME=[.26,.5],clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const aRel=a=>Math.min(...a.d.stages.map(s=>S.rel[s.eng]));
+const survF=()=>{let f=S.bld.silo?.6:.3;if(S.bld.radar)f=1-(1-f)*.5;if(S.bld.tenger)f=f*2/3+.3;return f};
+const abmP=()=>S.bld.radar?.2*(S.bld.abm||0):0;
+const reach=R=>S.ars.filter(a=>a.rng>=R.dist&&a.cnt>0);
+const deter=R=>reach(R).reduce((s,a)=>s+a.cnt*aRel(a)*survF()*(1-R.def)*(S.tech.mirv?2:1)*Math.cbrt(a.y/100),0);
+const need=R=>1+R.ars*R.aggr*.6;
+const rivEst=R=>S.bld.felder?f0(R.ars)+' db':R.ars<1?'nincs jele':`kb. ${Math.floor(R.ars/10)*10}–${Math.floor(R.ars/10)*10+10} db`;
+const canTreaty=R=>S.bld.felder&&!R.treaty&&!R.dead&&R.ars>=5&&(R.calm||0)>=6&&R.tens<35&&deter(R)>=need(R)&&S.money>=40;
+function deployType(){
+  const d=JSON.parse(JSON.stringify(S.design)),B=bld(),w=B.w;if(!w.y||S.ars.length>=8)return;
+  const sig=JSON.stringify([d.stages,d.wh,d.wh==='conv'?d.convMass:0]),dup=S.ars.find(a=>JSON.stringify([a.d.stages,a.d.wh,a.d.wh==='conv'?a.d.convMass:0])===sig);
+  if(dup){depMsg=`<span class="pill go">Már hadrendben</span> Ez a rakéta ${dup.n} néven már rendszeresítve van (${dup.cnt} db). Gyártani a Világ lapon lehet.`;return}
+  const o={alloy:sfm(),heatLimit:heatLimit()},why={};let rng=0;
+  const tryIt=(p,c)=>{d.pitch=p;d.cutoff=c;d.goal='';const r=simulate(d,o);if(r.out==='impact'){rng=Math.max(rng,Math.min(20000,r.range/1000));return true}why[r.out]=1;return false};
+  tryIt(S.design.pitch,S.design.cutoff);
+  for(const p of[20,30,40,50,60,70])for(const c of[100,80,60,45,30])if(tryIt(p,c))break;
+  if(rng<200){const m=B.twr<1||why.nolift&&!rng?'a rakéta nem emelkedik el, a tolóerő kisebb a súlynál':rng?`a hatótáv csak ${f0(rng)} km, legalább 200 km kell`:why.burnup?'a visszatérő egység minden próbapályán elég, erősebb hőpajzs kell':'a rakéta egyik próbapályán sem ér célba épségben';
+    depMsg=`<span class="pill bad">Sikertelen</span> A típust nem lehet rendszeresíteni: ${m}.`;log('Rendszeresítés sikertelen: '+m+'.');return}
+  S.arsId=(S.arsId||0)+1;S.ars.push({n:'R-'+S.arsId,wn:w.n,d,rng:Math.round(rng),y:w.y,mat:w.mat,cost:Math.round(B.cost),cnt:0,cep:cepFrac()});
+  log(`Új típus hadrendben: R-${S.arsId}, hatótáv ${f0(rng)} km. Gyártás a Világ lapon.`);
+  depMsg=`<span class="pill ok">Hadrendben</span> Új típus: R-${S.arsId}, ${w.n}, hatótáv ${f0(rng)} km, darabja ${Math.round(B.cost)} M. Még egy sincs legyártva.`;
+}
+function worldTick(){
+  const g=.004+.003*(S.bld.lakas||0)+(S.bld.korhaz?.002:0)+(S.tech.agri?.002:0);S.cities.forEach(c=>c.p*=1+g);S.rural*=1+g*.5;
+  if(S.emb>0&&--S.emb===0)log('Az embargó lejárt, visszatértél a világkereskedelembe.');S.al.forEach(a=>{if(!a.ally&&a.rel>30)a.rel-=.5});
+  if(S.ccool>0)S.ccool--;
+  for(const R of S.riv){if(R.dead)continue;R.t++;if(R.cool>0)R.cool--;
+    if(!R.war)R.conv=Math.min(R.ccap,R.conv+R.cg*R.eco*(R.emb>0?.5:1));if(R.emb>0){R.emb--;R.eco=Math.max(.3,R.eco*.985)}
+    if(R.war){warTick(R);if(!R.dead&&R.war)R.tens=100;continue}
+    const mine=reach(R).reduce((a,t)=>a+t.cnt,0);
+    if(R.treaty)R.ars*=.98;else if(R.t>R.t0){R.ars=Math.min(R.cap,R.ars+R.gr*R.eco);R.y=Math.min(R.ymax,R.y*1.05);R.def=Math.min(R.dmax,R.def+.005)}
+    const D=deter(R),N=need(R),armed=R.ars>=2;
+    const target=clamp((R.treaty?10:!armed?20:D>=N?20+25*R.aggr:100)-(S.bld.dipl?8:0)-3*(S.bld.kikoto||0),0,100);
+    R.tens=clamp(R.tens+(target-R.tens)*(target>R.tens?(S.bld.dipl?.045:.06):.12)+(Math.random()-.5)*5,0,100);
+    R.calm=armed&&R.tens<35&&D>=N?(R.calm||0)+1:0;
+    if(!S.crisis&&armed&&!R.treaty&&!(R.cool>0)&&!(S.ccool>0)&&Math.random()<(R.tens>65?.25:R.tens>40?.05:0)){R.cool=6;S.ccool=3;S.crisis={r:R.id,k:Math.floor(Math.random()*3)};log(R.n+': válság. Döntened kell.')}
+    if(R.treaty&&D<N*.5&&Math.random()<.08){R.treaty=0;log(R.n+' felmondta a szerződést, mert az elrettentésed meggyengült.')}
+  }
+  if(popTot()<8&&!S.over){S.over=1;log('Az ország összeomlott.')}
+}
+function crisisCard(){
+  if(!S.crisis)return'';const R=S.riv.find(r=>r.id===S.crisis.r),t=['hadihajói lezárták a Kikötőváros előtti vizeket','csapatai felvonultak a határ közelében','ultimátumban követeli a rakétakísérletek leállítását'][S.crisis.k];
+  return`<section class="card" style="border-color:var(--bad)"><div class="eyebrow">Válság</div><h2>${R.n}</h2><p>${R.n} ${t}. A negyedév nem zárható le, amíg nem döntesz.</p>
+  <button class="sec" data-a="cr" data-k="firm">Kiállás. Ha az elrettentésed elég, meghátrál; ha nem, csapás is érhet</button>
+  <button class="sec" data-a="cr" data-k="give">Engedmény. −10 presztízs, −4 M alapkeret, a feszültség csökken</button>
+  <button class="sec" data-a="cr" data-k="talk" ${S.bld.dipl&&S.money>=30?'':'disabled'}>Tárgyalás · 30 M${S.bld.dipl?'':' · diplomáciai testület kell hozzá'}</button></section>`;
+}
+function crisis(k){
+  const R=S.riv.find(r=>r.id===S.crisis.r),D=deter(R),N=need(R);S.crisis=null;
+  if(k==='give'){S.prestige-=10;S.income-=4;R.tens=clamp(R.tens-25,0,100);log('Engedtél: −10 presztízs, −4 M alapkeret.')}
+  else if(k==='talk'){S.money-=30;R.tens=clamp(R.tens-18,0,100);log('Tárgyalás: '+R.n+' visszavonult, a feszültség enyhült.')}
+  else if(D>=N){S.prestige+=10;R.tens=clamp(R.tens-15,0,100);log(R.n+' meghátrált: az elrettentés működött.')}
+  else{R.tens=clamp(R.tens+15,0,100);
+    const x=Math.random();
+    if(x<.45)startWar(R,0);
+    else if(x<.55)rivStrike(R,2+Math.floor(Math.random()*3),'A kiállásod mögött nem volt elég erő. ');
+    else log(R.n+' nem hátrált meg, a feszültség tovább nő.')}
+}
+function rivStrike(R,k,pre,shotsIn){
+  const n=Math.min(Math.floor(R.ars),k);if(n<1)return null;R.ars-=n;const shots=shotsIn||[],sum={n,int:0,hit:0,pop:0,mis:0,b:''},src=[R.mx,R.my];
+  for(let i=0;i<n;i++){const t0=.25*i+(shotsIn?3.5:0);
+    if(Math.random()<abmP()){sum.int++;shots.push({f:src,to:HOME,res:'int',t0});continue}
+    sum.hit++;
+    if(Math.random()<.6){let x=Math.random()*S.cities.reduce((a,c)=>a+c.p,0);const c=S.cities.find(c=>(x-=c.p)<0)||S.cities[0];
+      const l=c.p*Math.min(.7,.12+.07*Math.log10(R.y))*(1-.25*(S.bld.ovo||0))*(S.bld.korhaz?.85:1);c.p-=l;sum.pop+=l;shots.push({f:src,to:[c.mx,c.my],res:'hit',t0})}
+    else{const live=S.ars.filter(a=>a.cnt>0);if(live.length){const a=live[Math.floor(Math.random()*live.length)],l=Math.min(a.cnt,S.bld.silo?1:2);a.cnt-=l;sum.mis+=l}
+      if(Math.random()<.3){const ks=Object.keys(S.bld).filter(b=>S.bld[b]>0);if(ks.length){const b=ks[Math.floor(Math.random()*ks.length)];S.bld[b]--;sum.b=BLD[b].n}}
+      shots.push({f:src,to:[HOME[0]+.04,HOME[1]-.05],res:'hit',t0})}
+  }
+  R.tens=100;S.nukedBy[R.id]=1;if(!shotsIn&&!(R.emb>0)){R.emb=24;log(R.n+' atomfegyvert vetett be: a világ embargót hirdetett ellene.')}
+  const txt=`${pre||''}${R.n} ${n} rakétát indított. Elfogva ${sum.int}, becsapódott ${sum.hit}.${sum.pop?` A városok vesztesége ${f2(sum.pop)} millió fő.`:''}${sum.mis?` Megsemmisült ${sum.mis} rakétád.`:''}${sum.b?` Megrongálódott: ${sum.b}.`:''}`;
+  log(`${R.n} csapást mért: ${sum.hit} találat.`);
+  if(!shotsIn)play({ex:shots,blast:sum.hit?{y:R.y,nuc:1,fus:R.y>=500,lead:.3,dur:11}:null,title:sum.hit?'Csapás érte az országot':'A védelem megfogta a támadást',txt,rows:[],won:[]});
+  return{sum,txt};
+}
+function strike(R,mode,N){
+  const pool=reach(R).filter(a=>a.y>=1).sort((a,b)=>b.y-a.y),shots=[],first=!S.nukedBy[R.id],r0=R.ars;let fl=0,int=0,hit=0,kill=0,popL=0,yMax=0,sent=0;
+  for(const a of pool)while(a.cnt>0&&sent<N){a.cnt--;sent++;const t0=.2*sent;
+    if(Math.random()>aRel(a)){fl++;shots.push({f:HOME,to:[R.mx,R.my],res:'fail',t0});continue}
+    for(let w=0;w<(S.tech.mirv?2:1);w++){
+      if(Math.random()<R.def){int++;if(!w)shots.push({f:HOME,to:[R.mx,R.my],res:'int',t0});continue}
+      hit++;yMax=Math.max(yMax,a.y);if(!w)shots.push({f:HOME,to:[R.mx+(Math.random()-.5)*.06,R.my+(Math.random()-.5)*.06],res:'hit',t0});
+      const sc=Math.cbrt(a.y/100),l=Math.min(R.pop*.15,.35*sc*sc)*(mode==='mil'?.15:1);R.pop-=l;popL+=l;
+      if(mode==='mil'){const q=effR(a.y)*.35/Math.max(.05,a.cep*R.dist),pk=1-Math.pow(.5,q*q);if(Math.random()<pk){const k=Math.min(R.ars,a.y>=1000?3:2);R.ars-=k;kill+=k}}
+      else R.eco=Math.max(.1,R.eco-.05*sc)
+    }}
+  if(!sent)return;S.st.nukes+=sent;
+  if(first){S.prestige-=30;S.emb=24;S.al.forEach(a=>{a.rel-=25;if(a.ally&&a.rel<40){a.ally=0;log(a.n+' felmondta a szövetséget.')}});S.riv.forEach(o=>{if(o!==R&&!o.dead){o.tens=clamp(o.tens+25,0,100);o.treaty=0}})}else S.prestige-=5;
+  R.treaty=0;R.tens=100;if(!R.war){R.war=1;R.front=0}
+  let txt=`${sent} rakéta indult ${R.n} ${mode==='mil'?'katonai célpontjai':'ipari körzetei'} ellen. Meghibásodott ${fl}, elfogott töltet ${int}, célba ért ${hit}.`;
+  txt+=mode==='mil'?` Megsemmisült ${f0(kill)} rakétája a mintegy ${f0(r0)}-ból. Járulékos embervesztesége ${f2(popL)} millió fő, népessége ${f1(R.pop)} millió.`:` Gazdasága ${Math.round(R.eco*100)}%-on áll, embervesztesége ${f2(popL)} millió fő, népessége ${f1(R.pop)} millió.`;
+  txt+=first?' Elsőként vetettél be atomfegyvert: −30 presztízs, 24 negyedévre kizártak a világkereskedelemből, a szerződéseid felbomlottak. Szövetségesed az marad, akivel a viszony 40 fölött maradt.':' Válaszcsapásként a világ tudomásul veszi: −5 presztízs, embargó nincs.';
+  let ret=null;
+  if(R.ars<1&&(R.eco<=.4||R.pop<=.4*fresh().riv.find(o=>o.id===R.id).pop)){R.dead=1;R.tens=0;txt+=` ${R.n} összeomlott, többé nem fenyeget.`}
+  else if(R.ars>=1){ret=rivStrike(R,Math.ceil(R.ars*R.aggr)+2,'',shots);if(ret)txt+=' Válaszcsapás: '+ret.txt}
+  log(`Csapás ${R.n} ellen: ${hit} találat.`);
+  const by=hit?yMax:ret&&ret.sum.hit?R.y:0;
+  play({ex:shots,blast:by?{y:by,nuc:by>=1,fus:by>=500,lead:.3,dur:11}:null,title:'Csapás és válasz',txt,rows:[],won:check({})});
+}
+const allySup=()=>S.al.filter(a=>a.ally).reduce((t,a)=>t+a.conv*.6,0);
+function convPow(R){const army=R.dist>3000?Math.min(S.mil.army,2+3*S.mil.navy):S.mil.army;return(army*(S.tech.mot?1.3:1)+S.mil.air*1.6+S.mil.navy*1.2)*(S.tech.ew?1.2:1)+allySup()}
+function startWar(R,byMe){
+  R.war=1;R.front=0;R.treaty=0;R.tens=100;
+  if(byMe){S.prestige-=10;S.al.forEach(a=>a.rel-=5);S.riv.forEach(o=>{if(o!==R&&!o.dead)o.tens=clamp(o.tens+10,0,100)});log('Hadat üzentél: '+R.n+'. −10 presztízs.')}
+  else log(R.n+' hagyományos erőkkel támadást indított. Háború.');
+}
+function warTick(R){
+  const P=convPow(R),E=R.conv*Math.max(.3,R.eco),tot=P+E||1,sh=14*(P-E)/tot+(Math.random()-.5)*6;
+  R.front=clamp(R.front+sh,-100,100);
+  const lp=Math.min(.14,.12*E/tot)*(S.tech.sam?.75:1);for(const u in S.mil)S.mil[u]=Math.max(0,Math.round(S.mil[u]*(1-lp)*10)/10);
+  R.conv=Math.max(0,R.conv*(1-.12*P/tot));S.money-=10;S.rural=Math.max(1,S.rural-.03);
+  if(R.front>=100){R.war=0;R.front=0;R.treaty=1;R.ars=0;R.cap=Math.round(R.cap/3);R.conv*=.5;R.tens=5;R.calm=0;S.income+=15;S.prestige+=20;S.st.wins++;log(R.n+' fegyverszünetet kért. Győzelem: leszerelés és +15 M alapkeret.');return}
+  if(R.front<=-100){R.war=0;R.front=0;R.tens=50;R.cool=10;S.income-=15;S.prestige-=25;const c=S.cities.reduce((a,b)=>a.p>b.p?a:b);c.p*=.85;log('Vereség '+R.n+' ellen: −15 M alapkeret, −25 presztízs, a '+c.n+' megszállás alatt szenvedett.');return}
+  log(`${R.n}: a front ${sh>=0?'előrenyomult':'hátrált'}, állása ${Math.round(R.front)}. Hadiköltség 10 M.`);
+  if(R.front>60&&R.ars>=1&&deter(R)<need(R)&&Math.random()<.2)rivStrike(R,2+Math.floor(Math.random()*3),'A vesztésre álló rivális atomfegyverhez nyúlt, mert az elrettentésed nem tartotta vissza. ');
+}
+function peace(R){
+  if(R.front>-40){R.war=0;R.tens=60;R.cool=8;if(R.front>50){S.income+=5;log('Béke '+R.n+' országával, kedvező feltételekkel: +5 M alapkeret.')}else log('Fehér béke: '+R.n+'.');R.front=0}
+  else log(R.n+' elutasította a békeajánlatot, mert nyerésre áll.');
+}
+function cstrike(R,N){
+  const pool=reach(R).filter(a=>a.y<1),shots=[];let sent=0,hit=0,fl=0,int=0,yMax=0;
+  for(const a of pool)while(a.cnt>0&&sent<N){a.cnt--;sent++;const t0=.2*sent;
+    if(Math.random()>aRel(a)){fl++;shots.push({f:HOME,to:[R.mx,R.my],res:'fail',t0});continue}
+    if(Math.random()<R.def*.5){int++;shots.push({f:HOME,to:[R.mx,R.my],res:'int',t0});continue}
+    hit++;yMax=Math.max(yMax,a.y);shots.push({f:HOME,to:[R.mx+(Math.random()-.5)*.06,R.my+(Math.random()-.5)*.06],res:'hit',t0})}
+  if(!sent)return;
+  const dmg=hit*(S.tech.pgm?.6:.15);R.conv=Math.max(0,R.conv-dmg);R.front=clamp(R.front+hit*(S.tech.pgm?1.5:.5),-100,100);
+  log(`Hagyományos rakétacsapás ${R.n} ellen: ${hit} találat.`);
+  play({ex:shots,blast:hit?{y:yMax,lead:.3,dur:4}:null,title:'Hagyományos rakétacsapás',txt:`${sent} rakéta indult. Meghibásodott ${fl}, elfogva ${int}, célba ért ${hit}. A rivális hagyományos ereje ${f1(dmg)} egységgel csökkent.${S.tech.pgm?'':' Precíziós robbanófej nélkül a hatás kicsi.'}`,rows:[],won:[]});
+}
+function vVilag(){
+  let h=crisisCard()+`<section class="card"><h2>Világ</h2><canvas id="wmap"></canvas><p class="dim">A gyűrű a feszültséget mutatja, a szaggatott vonal zöld, ha van odáig érő rakétád.</p></section>`;
+  h+=`<section class="card"><h2>Hazád</h2><div class="grid"><div><span>Népesség</span>${f1(popTot())} M fő</div><div><span>Adó</span>+${Math.round(popTot()*.8)} M</div><div><span>Elfogási esély</span>${Math.round(abmP()*100)}%</div><div><span>Rakéták túlélése</span>${Math.round(survF()*100)}%</div>${S.cities.map(c=>`<div><span>${c.n}</span>${f2(c.p)} M</div>`).join('')}</div></section>`;
+  h+=`<section class="card"><h2>Hagyományos erők</h2>`+Object.entries(UNIT).map(([u,U])=>{const lock=U.t&&!S.tech[U.t];return`<div class="tech"><div class="row"><h3>${U.n}</h3><span class="pill ${S.mil[u]>=1?'ok':''}">${f1(S.mil[u])} db</span></div>${lock?`<p class="dim">Előfeltétel: ${TECH[U.t].n}.</p>`:`<div class="fine"><button class="sec" data-a="unit" data-k="${u}:1" ${S.money<U.c?'disabled':''}>+1 · ${U.c} M</button><button class="sec" data-a="unit" data-k="${u}:5" ${S.money<U.c*5?'disabled':''}>+5</button><button class="sec" data-a="disb" data-k="${u}" ${S.mil[u]>=1?'':'disabled'}>−1</button></div>`}</div>`}).join('')+`<p class="dim">Fenntartás negyedévente: hadosztály 1 M, repülőezred és flottilla 2 M. Tengeren túli rivális ellen a flotta szabja meg, hány hadosztály vethető be: kettő, és flottillánként még három.</p></section>`;
+  h+=`<section class="card"><h2>Hadrendben álló rakéták</h2>`+(S.ars.length?S.ars.map((a,i)=>`<div class="tech"><div class="row"><h3>${a.n} · ${a.wn}</h3><span class="pill ${a.cnt?'ok':''}">${a.cnt} db</span></div><p class="dim">Hatótáv ${f0(a.rng)} km, ${yTxt(a.y)}, megbízhatóság ${Math.round(aRel(a)*100)}%. Darabja ${a.cost} M${a.mat?` és ${a.mat} egység hasadóanyag`:''}.</p><div class="fine">${[1,5,10].map(n=>`<button class="sec" data-a="mk" data-k="${i}:${n}" ${S.money<a.cost||S.mat<a.mat?'disabled':''}>+${n}</button>`).join('')}${[1,5].map(n=>`<button class="sec" data-a="unmk" data-k="${i}:${n}" ${a.cnt?'':'disabled'}>−${n}</button>`).join('')}${a.cnt?'':`<button class="sec" data-a="deltype" data-k="${i}">Törlés</button>`}</div></div>`).join(''):`<p class="dim">Még nincs típus. A Tervezőben állíts össze egy töltettel szerelt rakétát, és vedd hadrendbe.</p>`)+`<p class="dim">Fenntartás: két rakétánként 1 M negyedévente. Csak az számít elrettentésnek, ami elér a riválisig, túléli az első csapást és átjut a védelmén.</p></section>`;
+  h+=`<section class="card"><h2>Semleges országok</h2>`+S.al.map(A=>`<div class="tech"><div class="row"><h3>${A.n}</h3><span class="pill ${A.ally?'ok':A.rel>=70?'go':''}">${A.ally?'szövetséges':'viszony '+Math.round(A.rel)}</span></div><div class="fine"><button class="sec" data-a="aid" data-k="${A.id}" ${S.money<25||A.rel>=100?'disabled':''}>Segély · 25 M</button><button class="sec" data-a="ally" data-k="${A.id}" ${!A.ally&&A.rel>=70&&S.money>=40?'':'disabled'}>Szövetség · 40 M</button></div></div>`).join('')+`<p class="dim">70-es viszony fölött köthető szövetség. Egy szövetséges 6 M kereskedelmi bevételt ad, ami embargó alatt is megmarad, és háborúban csapatokkal segít.</p>${S.emb>0?`<p><span class="pill bad">embargó</span> Még ${S.emb} negyedévig ki vagy zárva a világkereskedelemből.</p>`:''}</section>`;
+  const sn=S.sn||1;
+  for(const R of S.riv){
+    const D=deter(R),N=need(R),rc=reach(R).reduce((a,t)=>a+t.cnt,0),rn=reach(R).filter(t=>t.y>=1).reduce((a,t)=>a+t.cnt,0),cc=rc-rn,seg=Math.round(R.tens/10);
+    h+=`<section class="card"><div class="row"><h2>${R.n}</h2>${R.dead?'<span class="pill">összeomlott</span>':R.war?'<span class="pill bad">háború</span>':R.treaty?'<span class="pill ok">szerződés</span>':`<span class="pill ${R.tens>65?'bad':R.tens>35?'go':'ok'}">feszültség ${Math.round(R.tens)}</span>`}</div>`;
+    if(!R.dead){
+      h+=`<div class="bar">${[...Array(10)].map((_,i)=>`<i class="${i<seg?(R.tens>65?'min':'on'):''}"></i>`).join('')}</div>
+      <div class="grid"><div><span>Távolság</span>${f0(R.dist)} km</div><div><span>Népesség</span>${f1(R.pop)} M</div><div><span>Rakétái</span>${rivEst(R)}</div><div><span>Töltetei</span>${S.bld.felder?yTxt(R.y):'ismeretlen'}</div><div><span>Védelme</span>${S.bld.felder?Math.round(R.def*100)+'%':'ismeretlen'}</div><div><span>Odáig érő rakétáid</span>${rc} db</div></div>
+      <p>${S.bld.felder?(D>=N?'<span class="pill ok">Az elrettentés tart</span>':'<span class="pill bad">Az elrettentés gyenge</span>')+` Erőd ${f1(D)}, a szükséges ${f1(N)}.`:`Elrettentő erőd ${f1(D)}. Felderítő műholdak nélkül nem tudod, elég-e.`}</p>
+      <button class="sec" data-a="treaty" data-k="${R.id}" ${canTreaty(R)?'':'disabled'}>Fegyverzetkorlátozási szerződés · 40 M</button>
+      ${R.treaty?'':`<p class="dim">A szerződés feltétele: felderítő műholdak, és hat egymást követő negyedév 35 alatti feszültséggel és tartó elrettentéssel (most ${R.calm||0}/6). Fegyvertelen riválissal nincs miről szerződni. A feszültséget a diplomáciai testület és a kikötő viszi lejjebb.</p>`}
+      <div class="grid"><div><span>Hagyományos ereje</span>${S.bld.felder?f1(R.conv*Math.max(.3,R.eco)):'ismeretlen'}</div><div><span>A te erőd ellene</span>${f1(convPow(R))}</div></div>
+      ${R.emb>0?`<p class="dim"><span class="pill bad">embargó</span> Atomfegyvert vetett be, még ${R.emb} negyedévig ki van zárva a világkereskedelemből, lassabban fejlődik.</p>`:''}
+      ${R.war?`<p>Front: <b>${Math.round(R.front)}</b>. −100 a vereség, +100 a győzelem.</p><div class="bar">${[...Array(10)].map((_,i)=>`<i class="${i<Math.round((R.front+100)/20)?'on':''}"></i>`).join('')}</div>
+      <div class="fine"><button class="sec" data-a="peace" data-k="${R.id}">Békeajánlat</button><button class="sec" data-a="cstrike" data-k="${R.id}" ${cc?'':'disabled'}>Hagyományos rakétacsapás</button></div>`
+      :`<button class="sec" data-a="war" data-k="${R.id}:war">${S.arm===R.id+':war'?'Biztos? Koppints újra a hadüzenethez':'Hadüzenet'}</button>`}
+      <div class="fine"><button class="sec" data-a="sn">Csapás mérete: ${sn>5?'mind':sn}</button></div>
+      <div class="fine"><button class="sec" data-a="strike" data-k="${R.id}:mil" ${rn?'':'disabled'}>${S.arm===R.id+':mil'?'Biztos? Válaszcsapás várható':'Atomcsapás katonai célokra'}</button><button class="sec" data-a="strike" data-k="${R.id}:ind" ${rn?'':'disabled'}>${S.arm===R.id+':ind'?'Biztos? Válaszcsapás várható':'Atomcsapás ipari körzetekre'}</button></div>
+      <p class="dim">Az ipari körzetekre mért csapás a népességet és a gazdaságot pusztítja, a katonai célokra mért a rakétákat, kisebb járulékos emberveszteséggel. Aki elsőként vet be atomfegyvert, azt 24 negyedévre kizárják a világkereskedelemből. A válaszcsapásért nem jár embargó.</p>`;
+    }
+    h+=`</section>`;
+  }
+  return h;
+}
+function endQuarter(){
+  const n0=LC;S.q++;S.money+=netInc();if(S.money<0){S.money=Math.round(S.money*1.05);S.prestige-=1;log('Költségvetési hiány: 5% kamat és presztízsveszteség.')}
+  if(S.research&&--S.research.left<=0){const id=S.research.id;S.tech[id]=1;if(id==='qa')for(const k in S.rel)S.rel[k]=Math.min(.98,S.rel[k]+.05);log('Kutatás kész: '+TECH[id].n+'.');toast('Kutatás kész: '+TECH[id].n);S.research=null}
+  S.builds=S.builds.filter(b=>{if(--b.left<=0){if(b.b){S.bld[b.k]=(S.bld[b.k]||0)+1;log(BLD[b.k].n+' elkészült.')}else{S.mc[b.k]++;log(MATS[b.k].n+' bővítése elkészült.')}return false}return true});
+  if(S.halt>0)S.halt--;S.mat+=matRate();
+  if(Math.random()<.24){const r=Math.random();
+    if(r<.2&&S.research){S.research.left++;log('Beszállítói késés: a kutatás egy negyedévvel csúszik.')}
+    else if(r<.36){S.money-=10;log('Költségvetési vita: 10 M elvonás.')}
+    else if(r<.5&&S.mc.ore>0&&!S.bld.banya){S.mc.ore--;log('Exportkorlátozás: a nyersanyag-szerződés egy szintet esett.')}
+    else if(r<.64&&matRate()>0){S.halt=2;log('Nemzetközi ellenőrzés: az anyagtermelés két negyedévig áll.')}
+    else if(r<.74&&S.bld.ero){S.money-=15;log('Tervezett reaktorleállás: 15 M kiesés.')}
+    else if(r<.84&&S.bld.uni&&S.research&&S.research.left>1){S.research.left--;log('Tehetséges évfolyam végzett: a kutatás egy negyedévvel gyorsul.')}
+    else{S.money+=12;log('Sikeres beszámoló: 12 M rendkívüli támogatás.')}}
+  worldTick();check({});extQuarter(n0);
+}
+function launch(){
+  const d=S.design,B=bld(),w=B.w;if(launchBlock(B))return;S.launches++;
+  S.money-=B.cost;if(w.nuc)S.mat-=w.mat;
+  let o={alloy:sfm(),heatLimit:heatLimit()};
+  B.stages.some((s,i)=>{if(Math.random()>S.rel[s.id]){o.failSt=i;o.failFrac=.05+.9*Math.random();return true}});
+  const r=simulate(d,o);
+  [...new Set(B.stages.map(s=>s.id))].forEach(id=>S.rel[id]=Math.min(.98,S.rel[id]+(r.out==='fail'?.05:.03)*(S.bld.kovet?2:1)));
+  let miss=null,scat=0;
+  if(r.out==='impact'){scat=gauss()*r.range*cepFrac();if(d.target)miss=(r.range+scat)/1000-d.target}
+  const won=check({r,miss,d});flightStat(r,miss);
+  const rows=[['Csúcsmagasság',f0(r.apo/1000)+' km'],['Legnagyobb sebesség',f0(r.vmax)+' m/s'],['Repülési idő',f0(r.tof)+' s'],['Max. dinamikus nyomás',f0(r.maxQ/1000)+' kPa']];
+  if(r.vRe)rows.push(['Visszatérési sebesség',f0(r.vRe)+' m/s'],['Csúcs-hőáram',f1(r.maxHeat/1e6)+' MW/m²']);
+  const txt={nolift:'A rakéta nem emelkedett el: a tolóerő kisebb a súlynál.',
+    fail:`Hajtóműhiba a(z) ${r.failSt+1}. fokozatban, T+${f0(r.failT||0)} s-nál. Minden indítással nő a típus megbízhatósága.`,
+    crash:'A rakéta még a hajtott szakaszban a felszínbe csapódott.',
+    burnup:`A visszatérő egység elégett. A csúcs-hőáram ${f1(r.maxHeat/1e6)} MW/m² lett volna, a pajzs ${f1(heatLimit()/1e6)}-t bír.`,
+    orbit:`A teher pályára állt. Perigeum ${f0(r.rp/1000)} km, a legnagyobb magasság ${f0(r.apo/1000)} km.`,
+    escape:'A teher elérte a szökési sebességet és elhagyja a Föld környezetét.',
+    impact:`Becsapódás ${f1((r.range+scat)/1000)} km-nél${miss!==null?`, ${f2(Math.abs(miss))} km-rel ${miss>0?'a cél mögött':'a cél előtt'}`:''}. Ebből az irányítás szórása ${f2(Math.abs(scat)/1000)} km.${w.y?` Hatássugár: ${f2(effR(w.y))} km.`:''}`}[r.out];
+  const title={nolift:'A starthelyen maradt',fail:'Meghibásodás',crash:'Lezuhant',burnup:'Elégett a légkörben',orbit:'Pályán',escape:'Szökési pálya',impact:miss!==null&&w.y&&Math.abs(miss)<=effR(w.y)?'Telitalálat':'Becsapódás'}[r.out];
+  save();
+  play({res:r,d:JSON.parse(JSON.stringify(d)),miss,title,txt,rows,won});
+}
+function test(k){
+  const d=S.design;let o,title,txt,won=[];
+  if(k==='conv'){S.money-=1;const y=d.convMass*CONVK/1e6;o={y,lead:2.2,tower:1,dur:5};title='Próbarobbantás';txt=`${f0(d.convMass)} kg-os töltet, ${yTxt(y)} egyenérték. Hatássugár ${f2(effR(y))} km.`}
+  else{const w=WH[k];S.money-=10;S.mat-=w.mat;const ok=S.tested[k]||Math.random()<.7;
+    o={y:w.y,nuc:1,fus:w.fus,lead:3.2,tower:1,dur:14,fizz:!ok};
+    if(ok){const first=!S.tested[k];S.tested[k]=1;S.prestige+=first?5:1;title=w.n+': sikeres próba';txt=`Mért hatóerő ${yTxt(w.y)}, hatássugár ${f2(effR(w.y))} km.${first?' A típus rakétára szerelhető.':''}`;
+      log(w.n+' sikeres próbája.');won=check({test:w})}
+    else{title='Részleges működés';txt='Az eszköz a tervezett hatóerő töredékét adta le. A mérési adatok alapján a következő próba esélye jobb, de az anyag elveszett.';log(w.n+' próbája részleges volt.')}}
+  achCheck();save();play({test:o,title,txt,rows:[],won});
+}
+function orbAim(){
+  const d=S.design,o={alloy:sfm(),heatLimit:heatLimit(),boOnly:1},esc=d.goal==='esc',need=d.goal==='hi'?1000e3:120e3,cap=need+60e3;
+  const bo=(p,c)=>{d.pitch=p;d.cutoff=c;return simulate(d,o).bo};
+  const ev=p=>{let b=bo(p,100);if(!b)return{m:-1e18,c:100,h:0};if(esc)return{m:b.v-b.ve,c:100,h:0};if(b.eps<0)return{m:b.rp,c:100,h:b.h};
+    b=bo(p,10);if(!b||b.eps>=0)return{m:-1e17,c:10,h:0};let lo=10,hi=100,m=b.rp,hh=b.h;
+    for(let i=0;i<8;i++){const mid=(lo+hi)/2;b=bo(p,mid);if(b&&b.eps<0){lo=mid;m=b.rp;hh=b.h}else hi=mid}
+    return{m,c:lo,h:hh}};
+  const better=(a,b)=>{if(esc)return a.m>b.m;const ka=Math.min(a.m,cap),kb=Math.min(b.m,cap);return ka>kb||(ka===kb&&ka===cap&&((a.g||'')===(b.g||'')?a.h<b.h:!a.g))};
+  let best={m:-1e99,c:d.cutoff,h:0,g:d.ign||''},bp=d.pitch;const tr=p=>{if(p<0||p>90)return;const e=ev(p);e.g=d.ign;if(better(e,best)){best=e;bp=p}};
+  for(const g of esc||d.stages.length<2?['']:['','now']){d.ign=g;for(let p=0;p<=90;p+=5)tr(p)}
+  d.ign=best.g;for(const s of[2.5,1,.5]){const p0=bp;tr(p0-s);tr(p0+s)}
+  let bc=best.c;
+  if(!esc&&best.m>=need){const tgt=Math.min(best.m,need+30e3);let lo=10,hi=bc;for(let i=0;i<10;i++){const mid=(lo+hi)/2,b=bo(bp,mid);b&&b.eps<0&&b.rp>=tgt?hi=mid:lo=mid}bc=hi}
+  d.pitch=bp;d.cutoff=Math.round(bc*1000)/1000;const okk=esc?best.m>=0:best.m>=need;
+  log(best.m<-1e16?'Automata célzás: ezzel a rakétával egyik dőlésszögnél sincs értékelhető pálya.':`Automata célzás: dőlésszög ${f1(bp)}°, leállítás ${f1(d.cutoff)}%. ${okk?'A pályacél teljesül.':'A pályacélhoz ez a rakéta kevés, ez a legjobb beállítás.'}`);
+}
+function autoAim(){
+  if(!S.design.target){if(S.design.goal)orbAim();return}
+  const d=S.design,o={alloy:sfm(),heatLimit:heatLimit()},tg=d.target*1000;
+  const f=c=>{d.cutoff=c;const r=simulate(d,o);return(r.out==='orbit'||r.out==='escape')?1e12:r.range-tg};
+  if(f(100)<0){d.cutoff=100;log('Automata célzás: a rakéta ezzel a dőlésszöggel nem ér el a célig.');return}
+  let lo=10,hi=100;if(f(10)>0){d.cutoff=10;return}
+  for(let i=0;i<26;i++){const mid=(lo+hi)/2;f(mid)>0?hi=mid:lo=mid}
+  d.cutoff=Math.round((lo+hi)/2*1000)/1000;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,k=b.dataset.k;if(extClick(a,k))return;const d=S.design;
+  if(a!=='reset')resetArm=false;if(a!=='strike'&&a!=='war')S.arm='';if(a!=='deploy')depMsg='';
+  if(a==='tab')S.tab=k;
+  else if(a==='endq'){if(S.crisis||S.ev||S.over)return;endQuarter()}
+  else if(a==='res'){if(S.research||S.money<tcost(k))return;S.money-=tcost(k);S.research={id:k,left:tq(k)}}
+  else if(a==='mat'){const m=MATS[k],lv=S.mc[k];if(S.money<m.c[lv])return;S.money-=m.c[lv];S.builds.push({k,left:m.q})}
+  else if(a==='bld'){const b=BLD[k],lv=S.bld[k]||0;if(lv>=b.c.length||S.money<b.c[lv]||S.builds.some(x=>x.b&&x.k===k))return;S.money-=b.c[lv];S.builds.push({k,left:b.q,b:1})}
+  else if(a==='loan'){if(S.loans<3){S.loans++;S.money+=80}}
+  else if(a==='repay'){if(S.loans&&S.money>=100){S.loans--;S.money-=100}}
+  else if(a==='press'){if(S.money>=15){S.money-=15;S.prestige+=5}}
+  else if(a==='deploy')deployType();
+  else if(a==='mk'){const[i,n]=k.split(':'),t=S.ars[i];for(let j=0;j<+n&&S.money>=t.cost&&S.mat>=t.mat;j++){S.money-=t.cost;S.mat-=t.mat;t.cnt++}check({})}
+  else if(a==='unit'){const[u,n]=k.split(':'),uc=UNIT[u].c;for(let j=0;j<+n&&S.money>=uc;j++){S.money-=uc;S.mil[u]++}check({})}
+  else if(a==='disb')S.mil[k]=Math.max(0,S.mil[k]-1);
+  else if(a==='aid'){const A=S.al.find(x=>x.id===k);if(S.money>=25){S.money-=25;A.rel=Math.min(100,A.rel+(S.bld.dipl?18:12))}}
+  else if(a==='ally'){const A=S.al.find(x=>x.id===k);if(!A.ally&&A.rel>=70&&S.money>=40){S.money-=40;A.ally=1;log('Szövetség: '+A.n+'.');check({})}}
+  else if(a==='war'){if(S.arm===k){S.arm='';startWar(S.riv.find(r=>r.id===k.split(':')[0]),1)}else S.arm=k}
+  else if(a==='peace')peace(S.riv.find(r=>r.id===k));
+  else if(a==='cstrike')cstrike(S.riv.find(r=>r.id===k),S.sn||1);
+  else if(a==='unmk'){const[i,n]=k.split(':');S.ars[i].cnt=Math.max(0,S.ars[i].cnt-n)}
+  else if(a==='deltype'){if(!S.ars[k].cnt)S.ars.splice(k,1)}
+  else if(a==='cr'){if(!S.crisis||(k==='talk'&&(S.money<30||!S.bld.dipl)))return;crisis(k)}
+  else if(a==='sn')S.sn=S.sn===1?5:S.sn===5?99:1;
+  else if(a==='treaty'){const R=S.riv.find(r=>r.id===k);if(canTreaty(R)){S.money-=40;R.treaty=1;R.tens=Math.min(R.tens,30);S.income+=8;S.prestige+=15;log('Fegyverzetkorlátozási szerződés: '+R.n+'.');check({})}}
+  else if(a==='strike'){if(S.arm===k){S.arm='';const[id,mode]=k.split(':');strike(S.riv.find(r=>r.id===id),mode,S.sn||1)}else S.arm=k}
+  else if(a==='addst')d.stages.push({eng:d.stages[d.stages.length-1].eng,n:1,prop:3000});
+  else if(a==='rmst')d.stages.pop();
+  else if(a==='fine')d.cutoff=Math.max(10,Math.min(100,Math.round((d.cutoff+ +k)*1000)/1000));
+  else if(a==='aim')autoAim();
+  else if(a==='launch')return launch();
+  else if(a==='test')return test(k);
+  else if(a==='skip')return finish();
+  else if(a==='close'){$('fly').hidden=true;PB=null;SND.stop()}
+  else if(a==='reset'){if(resetArm){resetArm=false;OV={v:'new',diff:S.diff||'n',has:1}}else resetArm=true}
+  save();render();
+});
+document.addEventListener('input',e=>{
+  const el=e.target,i=el.dataset.i;if(!i)return;const d=S.design,k=el.dataset.k,v=+el.value;
+  if(i==='n'){d.stages[k].n=v;$('on'+k).textContent=v}
+  else if(i==='prop'){d.stages[k].prop=vToProp(v);$('op'+k).textContent=f0(d.stages[k].prop)+' kg'}
+  else if(i==='convMass'){d.convMass=v;$('ocm').textContent=f0(v)+' kg'}
+  else if(i==='pitch'){d.pitch=v;$('opi').textContent=f1(v)+'°'}
+  else if(i==='cutoff'){d.cutoff=v;$('ocu').textContent=f2(v)+'%'}
+  if(S.tab==='terv')updRo();
+});
+document.addEventListener('change',e=>{
+  const el=e.target,s=el.dataset.s,d=S.design;
+  if(s==='eng')d.stages[el.dataset.k].eng=el.value;else if(s==='wh')d.wh=el.value;else if(s==='target')d.target=+el.value;else if(s==='goal')d.goal=el.value;else if(s==='ign')d.ign=el.value;
+  save();if(s||el.dataset.i==='convMass')render();
+});
+
+/* ---------- Rajz ---------- */
+function rkGeom(B){const segs=B.stages.map((s,i)=>({l:1.2+1.5*Math.cbrt(s.prop/1000),w:Math.max(.5,1-.2*i),n:s.n}));return{segs,cone:2,L:segs.reduce((a,s)=>a+s.l+.3,0)+2.6}}
+function drawRocket(c,B,si,cx,by,Hpx,o={}){
+  const G=rkGeom(B),u=Hpx/G.L,bw=Math.max(8,u*1.5),s0=G.segs[si],w0=bw*s0.w,nb=Math.min(s0.n,5);let y=by;
+  if(o.flame){const fl=u*o.flame*(3.2+Math.random()*.8),ex=o.exp||0;
+    for(const[wm,lm,c0,c1]of[[.55+ex,1,'rgba(255,140,40,.8)','rgba(255,70,10,0)'],[.32+ex*.5,.7,'rgba(255,225,150,.95)','rgba(255,160,60,0)'],[.16,.4,'rgba(255,255,255,1)','rgba(200,225,255,0)']]){
+      const g=c.createLinearGradient(0,y,0,y+fl*lm);g.addColorStop(0,c0);g.addColorStop(1,c1);c.fillStyle=g;const fw=w0*wm*1.3;
+      c.beginPath();c.moveTo(cx-w0*.38,y);c.quadraticCurveTo(cx-fw,y+fl*lm*.45,cx,y+fl*lm);c.quadraticCurveTo(cx+fw,y+fl*lm*.45,cx+w0*.38,y);c.fill()}
+    if(ex<.5){c.fillStyle='rgba(255,255,255,.65)';for(let i=1;i<4;i++){c.beginPath();c.ellipse(cx,y+fl*.12*i,w0*.16/(i*.5+.7),Math.max(1,u*.1),0,0,7);c.fill()}}}
+  if(si===0){c.fillStyle='#8f8b80';for(const sg of[-1,1]){c.beginPath();c.moveTo(cx+sg*w0/2,y-u*.5);c.lineTo(cx+sg*w0*.95,y+u*.05);c.lineTo(cx+sg*w0*.95,y-u*.5);c.lineTo(cx+sg*w0/2,y-u*2.3);c.fill()}}
+  for(let i=0;i<nb;i++){const bx=cx-w0/2+w0*(i+.5)/nb,q=w0/nb,g=c.createLinearGradient(bx-q*.42,0,bx+q*.42,0);g.addColorStop(0,'#6b7382');g.addColorStop(.4,'#39414f');g.addColorStop(1,'#1c222c');c.fillStyle=g;
+    c.beginPath();c.moveTo(bx-q*.22,y-u*.6);c.lineTo(bx+q*.22,y-u*.6);c.lineTo(bx+q*.42,y);c.lineTo(bx-q*.42,y);c.fill()}
+  y-=u*.6;
+  const shade=w=>{const g=c.createLinearGradient(cx-w/2,0,cx+w/2,0);g.addColorStop(0,'#b4afa2');g.addColorStop(.28,'#f7f3e7');g.addColorStop(.6,'#ddd8ca');g.addColorStop(1,'#7f7b71');return g};
+  for(let i=si;i<G.segs.length;i++){const sg=G.segs[i],w=bw*sg.w,l=sg.l*u;
+    c.fillStyle=shade(w);c.fillRect(cx-w/2,y-l,w,l);
+    c.fillStyle='rgba(20,28,42,.88)';if(i===0){c.fillRect(cx-w/2,y-l*.4,w/2,l*.16);c.fillRect(cx,y-l*.24,w/2,l*.16)}else c.fillRect(cx-w/2,y-l*.14,w,l*.07);
+    c.fillStyle='rgba(0,0,0,.25)';c.fillRect(cx-w/2,y-l,w,Math.max(1,u*.06));
+    y-=l;const nw=i+1<G.segs.length?bw*G.segs[i+1].w:w;
+    c.fillStyle='#5c6470';c.beginPath();c.moveTo(cx-w/2,y);c.lineTo(cx+w/2,y);c.lineTo(cx+nw/2,y-u*.3);c.lineTo(cx-nw/2,y-u*.3);c.fill();y-=u*.3}
+  const w=bw*G.segs[G.segs.length-1].w,ch=G.cone*u,np=()=>{c.beginPath();c.moveTo(cx-w/2,y);c.quadraticCurveTo(cx-w/2,y-ch*.6,cx,y-ch);c.quadraticCurveTo(cx+w/2,y-ch*.6,cx+w/2,y);c.closePath()};
+  c.fillStyle=o.nose||'#ff8a2b';np();c.fill();
+  c.save();np();c.clip();c.fillStyle='rgba(0,0,0,.28)';c.fillRect(cx+w*.12,y-ch,w,ch);c.fillStyle='rgba(255,255,255,.25)';c.fillRect(cx-w*.3,y-ch,w*.14,ch);c.restore();
+}
+const STARS=Array.from({length:110},()=>[Math.random(),Math.random(),Math.random()]);
+const LUMPS=Array.from({length:22},(_,i)=>[i/22*Math.PI*2,.75+Math.random()*.5,Math.random()]);
+const CLOUDS=Array.from({length:8},(_,i)=>({alt:1200+i*1300+Math.random()*600,x:Math.random(),w:.25+Math.random()*.3,parts:Array.from({length:7},(_,j)=>[(j-3)/3+(Math.random()-.5)*.3,(Math.random()-.5)*.35,.35+Math.random()*.35])}));
+const MTN=[.5,.9,.6,1,.7,.4,.8,1,.5,.75,.95,.6];
+const mix=(a,b,k)=>`rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*k)).join(',')})`;
+function stars(c,W,H,a){for(const s of STARS){c.fillStyle=`rgba(233,228,214,${a*(.35+.65*s[2])})`;c.fillRect(s[0]*W,s[1]*H,1+s[2],1+s[2])}}
+function puff(c,x,y,r,rgb,a){if(!(r>0)||!(a>0))return;const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${rgb},${a})`);g.addColorStop(.55,`rgba(${rgb},${a*.55})`);g.addColorStop(1,`rgba(${rgb},0)`);c.fillStyle=g;c.fillRect(x-r,y-r,2*r,2*r)}
+function vignette(c,W,H,a){const g=c.createRadialGradient(W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${a})`);c.fillStyle=g;c.fillRect(-20,-20,W+40,H+40)}
+function gantry(c,gx,gy,gt,gw,arm){c.strokeStyle='#9aa3b2';c.lineWidth=1.5;c.beginPath();c.moveTo(gx,gy);c.lineTo(gx,gt);c.moveTo(gx+gw,gy);c.lineTo(gx+gw,gt);
+  for(let i=0;i<8;i++){const y0=gy-(gy-gt)*i/8,y1=gy-(gy-gt)*(i+1)/8;c.moveTo(gx,y0);c.lineTo(gx+gw,y1);c.moveTo(gx+gw,y0);c.lineTo(gx,y1)}
+  c.moveTo(gx+gw,gt+(gy-gt)*.2);c.lineTo(gx+gw+arm,gt+(gy-gt)*.2);c.stroke();c.fillStyle='#ff5d4d';c.beginPath();c.arc(gx+gw/2,gt-3,2.5,0,7);c.fill()}
+function stAt(ts){const p=PB.res.pts;let i=PB.i;if(p[i].t>ts)i=0;while(i<p.length-2&&p[i+1].t<ts)i++;PB.i=i;const a=p[i],b=p[i+1],f=Math.max(0,Math.min(1,(ts-a.t)/Math.max(1e-6,b.t-a.t)));
+  return{t:ts,x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f,h:a.h+(b.h-a.h)*f,v:a.v+(b.v-a.v)*f,si:a.si,b:a.b,sep:a.sep}}
+function burst(c,x,y,r,k){const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(255,250,220,${1-k})`);g.addColorStop(.4,`rgba(255,150,40,${.9*(1-k)})`);g.addColorStop(1,'rgba(120,30,10,0)');c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,7);c.fill()}
+function drawChase(c,W,H,st,rt){
+  const r=PB.res,h=st.h,k=Math.min(1,h/40e3),g=c.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,mix([30,78,148],[2,5,14],k));g.addColorStop(.6,mix([110,166,218],[8,18,40],k));g.addColorStop(1,mix([232,216,188],[22,40,72],k));c.fillStyle=g;c.fillRect(0,0,W,H);stars(c,W,H,k*.9);
+  puff(c,W*.78,H*.22,H*.34,'255,236,190',.55*(1-k*.6));puff(c,W*.78,H*.22,H*.045,'255,252,236',1);
+  const Hpx=H*.26,cx=W/2,cy=H*.56,sc=Hpx/(rkGeom(r.B).L*2.5),gy=cy+h*sc;
+  for(const cl of CLOUDS){const sy=cy+(h-cl.alt)*sc*.035;if(sy>-80&&sy<H+80){const cw=cl.w*W*.5;for(const q of cl.parts){puff(c,cl.x*W+q[0]*cw,sy+q[1]*cw*.4+7,cw*q[2]*1.05,'150,170,195',.3);puff(c,cl.x*W+q[0]*cw,sy+q[1]*cw*.4,cw*q[2],'255,255,255',.85)}}}
+  if(gy<H+80){for(const[col,amp,par]of[['#6f8aa6',.5,.25],['#46607a',.32,.5]]){c.fillStyle=col;c.beginPath();c.moveTo(0,H+90);for(let i=0;i<=12;i++)c.lineTo(i*W/12,cy+h*sc*par-Hpx*amp*MTN[(i+(par>.3?5:0))%12]);c.lineTo(W,H+90);c.fill()}
+    const gg=c.createLinearGradient(0,gy,0,gy+H*.4);gg.addColorStop(0,'#4d5e46');gg.addColorStop(1,'#1c261d');c.fillStyle=gg;c.fillRect(0,gy,W,H-gy+80);
+    c.fillStyle='#8a8f96';c.fillRect(cx-Hpx*.5,gy-5,Hpx,9);c.fillStyle='#5d636c';c.fillRect(cx-Hpx*.5,gy+4,Hpx,4);
+    gantry(c,cx-Hpx*.36,gy,gy-Hpx*1.02,Hpx*.09,Hpx*.2)}
+  const boom=PB.boomAt!=null&&rt>PB.boomAt;
+  if(st.b&&!boom)PB.puffs.push({alt:h,x:(Math.random()-.5)*Hpx*.25,r:Hpx*(.08+Math.random()*.08),b:rt,d:Math.random()<.5?-1:1});
+  PB.puffs=PB.puffs.filter(q=>rt-q.b<4);
+  for(const q of PB.puffs){const a=rt-q.b,sy=Math.min(cy+(h-q.alt)*sc+a*10,gy+2);if(sy>H+70)continue;const hot=Math.max(0,1-a*2.5);
+    puff(c,cx+q.x*(1+a)+(q.alt<40?q.d*a*Hpx*.35:0),sy,q.r*(1+a*1.6),`${Math.round(235+20*hot)},${Math.round(232-40*hot)},${Math.round(228-110*hot)}`,.6*(1-a/4))}
+  if(boom){const k2=Math.min(1,(rt-PB.boomAt)/2);burst(c,cx,cy-Hpx*.4,Hpx*(.4+2.2*k2),k2);
+    c.fillStyle='#39414f';for(let i=0;i<9;i++){const a=i*.7+1,d2=k2*Hpx*(1+i%3);c.fillRect(cx+Math.cos(a)*d2,cy-Hpx*.4+Math.sin(a)*d2+k2*k2*120,5,9)}vignette(c,W,H,.35);return}
+  if(st.b){c.globalCompositeOperation='lighter';const gr=Hpx*(.5+.5*Math.min(1.2,h/30e3));puff(c,cx,cy+Hpx*.1,gr,'255,170,90',.3);
+    if(h<400){c.fillStyle=`rgba(255,160,70,${.35*(1-h/400)})`;c.beginPath();c.ellipse(cx,gy,Hpx*1.2,Hpx*.12,0,0,7);c.fill()}c.globalCompositeOperation='source-over'}
+  const a=pitchAt(PB.d,st.t,st.si)*.55,sh=h<3000?1.6:.5;
+  c.save();c.translate(cx+(Math.random()-.5)*sh,cy+(Math.random()-.5)*sh);c.rotate(a);
+  drawRocket(c,r.B,st.si,0,0,Hpx,{flame:st.b?1:0,exp:Math.min(1.2,h/30e3),nose:r.B.w.nuc?'#c8372b':'#ff8a2b'});c.restore();
+  vignette(c,W,H,.35);
+}
+function mapSetup(W,H){
+  const r=PB.res,p=r.pts,full=r.out==='orbit'||r.out==='escape';let phiMax=0,ap=p[0];
+  for(const q of p){phiMax=Math.max(phiMax,Math.atan2(q.x,q.y));if(q.h>ap.h)ap=q}
+  if(PB.d.target)phiMax=Math.max(phiMax,PB.d.target*1000/RE);
+  const a=full?0:-.15*phiMax-.004,b=full?Math.PI*2:phiMax*1.15+.004;
+  let x0=1e12,x1=-1e12,y0=1e12,y1=-1e12;const inc=(x,y)=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)};
+  for(const q of p)inc(q.x/1e3,q.y/1e3);for(let i=0;i<=40;i++){const f=a+(b-a)*i/40;inc(RE*Math.sin(f)/1e3,RE*Math.cos(f)/1e3)}
+  let bw=x1-x0,bh=Math.max(y1-y0,30);bw=Math.max(bw,bh*.6);
+  PB.map={a,b,full,fd:full||b-a>.6,ap,s:Math.min(W*.86/bw,H*.56/bh),ox:(x0+x1)/2,oy:(y0+y1)/2,drop:Math.max(bh,bw)*4};
+}
+function drawMap(c,W,H,st,endK){
+  const M=PB.map,r=PB.res,X=x=>W/2+(x/1e3-M.ox)*M.s,Y=y=>H*.5-(y/1e3-M.oy)*M.s;
+  let g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#03060e');g.addColorStop(1,'#0a1426');c.fillStyle=g;c.fillRect(0,0,W,H);stars(c,W,H,.8);
+  const ra=M.fd?0:M.a,rb=M.fd?Math.PI*2:M.b,rn=M.fd?360:120;
+  const ring=(rad,close)=>{c.beginPath();for(let i=0;i<=rn;i++){const f=ra+(rb-ra)*i/rn;c.lineTo(X(rad*Math.sin(f)),Y(rad*Math.cos(f)))}
+    if(close&&!M.fd)for(let i=rn;i>=0;i--){const f=ra+(rb-ra)*i/rn,q=Math.max(0,RE-M.drop*1e3);c.lineTo(X(q*Math.sin(f)),Y(q*Math.cos(f)))}};
+  for(const[alt,al]of[[140e3,.05],[90e3,.08],[45e3,.14]]){ring(RE+alt,true);c.fillStyle=`rgba(99,190,240,${al})`;c.fill()}
+  const ex=X(0),ey=Y(0),er=RE/1e3*M.s;g=c.createRadialGradient(ex,ey,Math.max(0,er-Math.max(70,er*.14)),ex,ey,er);g.addColorStop(0,'#081c30');g.addColorStop(1,'#1c5f88');
+  ring(RE,true);c.fillStyle=g;c.fill();c.shadowColor='#63d3e6';c.shadowBlur=16;c.strokeStyle='#6fc0de';c.lineWidth=2;ring(RE,false);c.stroke();c.shadowBlur=0;
+  c.strokeStyle='rgba(255,255,255,.2)';c.lineWidth=2;for(let i=0;i<16;i++){const f0=M.a+(M.b-M.a)*((i*.137+.05)%1),dl=(M.b-M.a)*.025;c.beginPath();for(let j=0;j<=4;j++){const f=f0+dl*j/4;c.lineTo(X((RE+7e3)*Math.sin(f)),Y((RE+7e3)*Math.cos(f)))}c.stroke()}
+  c.setLineDash([4,6]);c.strokeStyle='rgba(143,160,184,.5)';c.lineWidth=1;ring(RE+100e3,false);c.stroke();c.setLineDash([]);
+  c.font='11px IBM Plex Mono,monospace';c.fillStyle='#8fa0b8';c.fillText('START',X(0)-18,Y(RE)+16);
+  if(PB.d.target){const f=PB.d.target*1e3/RE,tx=X(RE*Math.sin(f)),ty=Y(RE*Math.cos(f)),pu=(st.t*.05)%1;c.strokeStyle=`rgba(255,138,43,${1-pu})`;c.lineWidth=1.5;c.beginPath();c.arc(tx,ty,4+12*pu,0,7);c.stroke();
+    c.strokeStyle='#ff8a2b';c.lineWidth=2;c.beginPath();c.moveTo(tx,ty);c.lineTo(tx,ty-16);c.stroke();c.fillStyle='#ff8a2b';c.fillRect(tx,ty-16,9,6);c.fillText('CÉL '+PB.d.target+' km',Math.min(tx-30,W-96),ty+16)}
+  c.setLineDash([2,5]);c.strokeStyle='rgba(99,211,230,.22)';c.lineWidth=1;c.beginPath();for(const q of r.pts){if(q.t>PB.end)break;c.lineTo(X(q.x),Y(q.y))}c.stroke();c.setLineDash([]);
+  c.shadowColor='#63d3e6';c.shadowBlur=8;c.strokeStyle='#63d3e6';c.lineWidth=2;c.beginPath();for(const q of r.pts){if(q.t>st.t)break;c.lineTo(X(q.x),Y(q.y))}c.lineTo(X(st.x),Y(st.y));c.stroke();c.shadowBlur=0;
+  if(st.t>=M.ap.t&&r.apo>120e3){const ax=X(M.ap.x),ay=Y(M.ap.y);c.fillStyle='#e9e4d6';c.beginPath();c.arc(ax,ay,2.5,0,7);c.fill();c.fillText('csúcs '+f0(r.apo/1e3)+' km',Math.min(ax+8,W-110),ay-8)}
+  const mx=X(st.x),my=Y(st.y);
+  if(endK>0)burst(c,mx,my,10+40*endK,endK);else{puff(c,mx,my,st.b?16:9,st.b?'255,160,70':'233,228,214',.7);c.fillStyle=st.b?'#ffd9a0':'#fff';c.beginPath();c.arc(mx,my,3,0,7);c.fill();
+    if(st.sep&&st.h<90e3&&PB.i>3){c.strokeStyle='rgba(255,170,60,.85)';c.lineWidth=5;c.beginPath();c.moveTo(mx,my);const q=r.pts[Math.max(0,PB.i-1)];c.lineTo(X(q.x),Y(q.y));c.stroke();puff(c,mx,my,22,'255,190,110',.8)}}
+  vignette(c,W,H,.4);
+}
+function drawHero(c,W,H){
+  let g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#081028');g.addColorStop(.55,'#2a3f70');g.addColorStop(.8,'#c9805a');g.addColorStop(.86,'#f0b877');g.addColorStop(1,'#f0b877');c.fillStyle=g;c.fillRect(0,0,W,H);stars(c,W,H*.5,.85);
+  const hz=H*.84;puff(c,W*.22,hz,H*.55,'255,214,150',.55);
+  for(const[col,amp,off]of[['#3a3f66',.2,0],['#232846',.12,5]]){c.fillStyle=col;c.beginPath();c.moveTo(0,H);for(let i=0;i<=12;i++)c.lineTo(i*W/12,hz-H*amp*MTN[(i+off)%12]);c.lineTo(W,H);c.fill()}
+  c.fillStyle='#0d1322';c.fillRect(0,hz,W,H-hz);
+  const cx=W*.7,Rh=H*.62,B=bld();
+  c.globalCompositeOperation='lighter';for(const sx of[cx-Rh*.6,cx+Rh*.5]){g=c.createLinearGradient(sx,hz,cx,hz-Rh*.8);g.addColorStop(0,'rgba(255,240,200,.3)');g.addColorStop(1,'rgba(255,240,200,0)');c.fillStyle=g;c.beginPath();c.moveTo(sx,hz);c.lineTo(cx-Rh*.14,hz-Rh*1.1);c.lineTo(cx+Rh*.14,hz-Rh*1.1);c.fill()}c.globalCompositeOperation='source-over';
+  gantry(c,cx-Rh*.26,hz,hz-Rh*1.02,Rh*.07,Rh*.14);c.fillStyle='#454b58';c.fillRect(cx-Rh*.32,hz-4,Rh*.64,6);
+  drawRocket(c,B,0,cx,hz-4,Rh,{nose:B.w.nuc?'#c8372b':'#ff8a2b'});
+  c.fillStyle='#0a0f1c';c.fillRect(W*.06,hz-10,W*.13,12);c.fillStyle='#ffd98a';c.fillRect(W*.085,hz-6,5,3);c.fillRect(W*.13,hz-6,5,3);
+  vignette(c,W,H,.4);
+}
+const BL={lump:Array.from({length:26},(_,i)=>[i/26*Math.PI*2+Math.random()*.1,.8+Math.random()*.45,Math.random()]),
+  stem:Array.from({length:16},()=>[Math.random()-.5,.8+Math.random()*.5,Math.random()]),
+  surge:Array.from({length:24},(_,i)=>[i/24*Math.PI*2,.7+Math.random()*.6]),
+  mot:Array.from({length:16},()=>[Math.random()*6.28,Math.sqrt(Math.random())*.8,.14+Math.random()*.2]),
+  emb:Array.from({length:36},()=>[Math.random()-.5,Math.random(),Math.random()])};
+const L3=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k),rgbs=a=>a.map(v=>Math.round(v)).join(',');
+function blob(c,x,y,r,cin,cout,ly=-.35){if(!(r>0))return;const g=c.createRadialGradient(x-.3*r,y+ly*r,r*.05,x,y,r);g.addColorStop(0,`rgb(${rgbs(cin)})`);g.addColorStop(1,`rgb(${rgbs(cout)})`);c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,7);c.fill()}
+function drawBlast(c,W,H,t,o){
+  const hz=H*.7,cx=W/2,tau=t-o.lead,nuc=!!o.nuc,Y=Math.max(o.y*(o.fizz?.03:1),1e-6),Rk=.07*Math.pow(Y,.4),Hk=4.5*Math.pow(Y,.25);
+  const lit=nuc&&tau>0?Math.max(0,1-tau/8):0,hot=nuc&&tau>0?clamp(1-(tau-.8)/4.5,0,1):0,cool=1-hot,dawn=nuc?clamp(tau/12,0,1):0;
+  const z0=W*.17/Rk,z1=H*.5/Hk,e=clamp((tau-1.4)/6,0,1),z=nuc?Math.exp(Math.log(z0)+(Math.log(z1)-Math.log(z0))*e*e*(3-2*e)):1;
+  if(nuc&&tau>3.2&&tau<4.4){const sk=9*(1-(tau-3.2)/1.2);c.translate((Math.random()-.5)*sk,(Math.random()-.5)*sk)}
+  let g=c.createLinearGradient(0,0,0,hz);
+  g.addColorStop(0,`rgb(${rgbs(L3(L3([5,10,28],[28,48,98],dawn),[96,58,44],lit*.6))})`);
+  g.addColorStop(.62,`rgb(${rgbs(L3(L3([30,50,96],[96,118,168],dawn),[226,134,78],lit*.7))})`);
+  g.addColorStop(1,`rgb(${rgbs(L3(L3([150,118,128],[246,176,146],dawn),[255,214,156],lit*.8))})`);
+  c.fillStyle=g;c.fillRect(-20,-20,W+40,hz+20);stars(c,W,hz*.55,.7*(1-lit)*(1-dawn));
+  const ccol=rgbs(L3(L3([52,62,98],[236,150,140],dawn),[255,176,116],lit*.8));
+  for(const cl of CLOUDS){const x=((cl.alt*.37)%1)*W,y=hz*(.5+.42*cl.x),cw=cl.w*W*.3;for(const q of cl.parts)puff(c,x+q[0]*cw,y+q[1]*cw*.3,cw*q[2]*.9,ccol,.25)}
+  g=c.createLinearGradient(0,hz,0,H);g.addColorStop(0,`rgb(${rgbs(L3(L3([92,84,104],[176,136,130],dawn),[240,170,110],lit*.7))})`);g.addColorStop(.25,`rgb(${rgbs(L3([24,44,74],[150,80,50],lit*.5))})`);g.addColorStop(1,`rgb(${rgbs(L3([5,12,24],[50,26,18],lit*.5))})`);
+  c.fillStyle=g;c.fillRect(-20,hz,W+40,H-hz+20);
+  c.strokeStyle=`rgba(255,255,255,${.07+.13*lit})`;c.lineWidth=1;for(let i=0;i<30;i++){const y=hz+3+(H-hz)*Math.pow(i/30,1.7),x=((i*97)%W+t*5*(i%3+1))%W;c.beginPath();c.moveTo(x,y);c.lineTo(x+8+i*2,y);c.stroke()}
+  const effpx=nuc?effR(o.y)*z:Math.max(6,10*Math.cbrt(o.y*4000)),tx=cx+(o.off||0)*effpx,ss=nuc?clamp(.25*z,5,30):26,gone=tau>0&&Math.abs(o.off||0)<=1;
+  if(tx>-20&&tx<W+20){if(!gone){c.fillStyle='#070c16';c.beginPath();c.moveTo(tx-ss,hz-ss*.25);c.lineTo(tx+ss,hz-ss*.25);c.lineTo(tx+ss*.8,hz+2);c.lineTo(tx-ss*.8,hz+2);c.fill();c.fillRect(tx-ss*.2,hz-ss*.7,ss*.35,ss*.5);if(o.tower)c.fillRect(tx-1,hz-ss*1.3,2,ss*.7)}}
+  else if(o.offKm!=null){c.fillStyle='#ff8a2b';c.font='12px IBM Plex Mono,monospace';c.fillText((tx<0?'← ':'')+'cél '+f1(Math.abs(o.offKm))+' km'+(tx<0?'':' →'),tx<0?12:W-150,hz+22)}
+  if(tau<0){
+    if(o.tower){c.fillStyle='#e9e4d6';c.font='800 64px Big Shoulders Display,sans-serif';c.textAlign='center';c.fillText(Math.ceil(-tau),cx,H*.3);c.textAlign='left'}
+    else{const pr=t/o.lead,x=cx-W*.4*(1-pr),y=hz*pr,gg=c.createLinearGradient(x-W*.12,y-hz*.3,x,y);gg.addColorStop(0,'rgba(255,170,60,0)');gg.addColorStop(1,'rgba(255,240,200,1)');c.strokeStyle=gg;c.lineWidth=3;c.beginPath();c.moveTo(x-W*.12,y-hz*.3);c.lineTo(x,y);c.stroke();puff(c,x,y,10,'255,230,180',.9)}
+    vignette(c,W,H,.4);return}
+  if(!nuc){
+    const Rc=Math.max(6,10*Math.cbrt(o.y*4000)),k=clamp(tau/.25,0,1);
+    c.globalCompositeOperation='lighter';puff(c,cx,hz-Rc*.4,Rc*6,'255,190,120',.5*Math.max(0,1-tau/.8));c.globalCompositeOperation='source-over';
+    const rr=Rc*(1+5*Math.pow(tau,.6));c.strokeStyle=`rgba(255,255,255,${Math.max(0,.7-tau*.3)})`;c.lineWidth=2;c.beginPath();c.ellipse(cx,hz+2,rr,rr*.16,0,0,7);c.stroke();
+    if(o.y>0){const up=Math.pow(Math.sin(Math.PI*clamp(tau/3,0,1)),.6),hh=Rc*4.2*up;
+      g=c.createLinearGradient(0,hz-hh,0,hz);g.addColorStop(0,'rgba(244,248,252,.95)');g.addColorStop(1,'rgba(205,216,228,.7)');c.fillStyle=g;
+      c.beginPath();c.moveTo(cx-Rc*.9,hz);c.quadraticCurveTo(cx-Rc*.6,hz-hh*.6,cx-Rc*.35,hz-hh);c.lineTo(cx+Rc*.35,hz-hh);c.quadraticCurveTo(cx+Rc*.6,hz-hh*.6,cx+Rc*.9,hz);c.fill();
+      for(const q of BL.emb){const x=cx+q[0]*Rc*5*tau,y=hz-(Rc*(5+6*q[1])*tau-Rc*4*tau*tau);if(y<hz)puff(c,x,y,2+q[2]*3,'240,246,252',.8)}
+      for(let j=0;j<5;j++)puff(c,cx+(j-2)*Rc*.35+tau*5,hz-hh-Rc*.3-tau*Rc*.5,Rc*(.9+tau*.3),'70,70,78',Math.max(0,.6-tau*.12));
+      if(tau<.5)burst(c,cx,hz-Rc*.3,Rc*(1+2.5*k),tau/.5)}
+    else{c.fillStyle=`rgba(230,238,245,${Math.max(0,.8-tau*.4)})`;c.beginPath();c.ellipse(cx,hz-8*Math.min(1,tau),10,16*Math.min(1,tau*2),0,0,7);c.fill()}
+    vignette(c,W,H,.4);return}
+  const Rf=Rk*Math.pow(Math.min(1,tau/1.4),.4),rise=Math.max(0,tau-1.2),s2=Math.pow(clamp(rise/9,0,1),1.1),top=Math.max(Rf*1.5,Hk*(1-Math.exp(-rise/3.4)));
+  const capR=Rf+(Hk*(o.fus?.46:.36)-Rf)*s2,capH=Rf+(Hk*.15-Rf)*s2,yc=Math.max(Rf*.5,top-capH),Rp=Rf*z,cw=capR*z,ch=capH*z,cy=hz-yc*z,big=Math.max(Rp,cw);
+  c.globalCompositeOperation='lighter';puff(c,cx,cy,big*5,'255,180,100',.45*hot);
+  for(let i=0;i<12;i++){const a=i*.5236+tau*.04,len=big*5;c.fillStyle=`rgba(255,220,160,${.07*hot})`;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(a-.045)*len,cy+Math.sin(a-.045)*len);c.lineTo(cx+Math.cos(a+.045)*len,cy+Math.sin(a+.045)*len);c.fill()}
+  c.globalCompositeOperation='source-over';
+  g=c.createLinearGradient(0,hz,0,H);g.addColorStop(0,`rgba(255,228,165,${.75*hot+.15*lit})`);g.addColorStop(1,'rgba(255,160,80,0)');c.fillStyle=g;c.beginPath();c.moveTo(cx-big*.8,hz);c.lineTo(cx+big*.8,hz);c.lineTo(cx+big*2.2,H);c.lineTo(cx-big*2.2,H);c.fill();
+  const rs=Rk*(1+5.5*Math.pow(tau,.75))*z;c.fillStyle=`rgba(255,255,255,${Math.max(0,.07-tau*.008)})`;c.beginPath();c.ellipse(cx,hz+rs*.05,rs,rs*.16,0,0,7);c.fill();
+  for(const m of[1,.8]){c.strokeStyle=`rgba(255,255,255,${Math.max(0,(.9-tau*.11)*m)})`;c.lineWidth=3*m;c.beginPath();c.ellipse(cx,hz+rs*m*.05,rs*m,rs*m*.16,0,0,7);c.stroke()}
+  const surge=front=>{const rb=Rk*(1.1+3.6*(1-Math.exp(-tau/2.6)))*z,sr=Rk*.55*z*clamp(tau/1.5,.2,1);for(const q of BL.surge){const sn=Math.sin(q[0]);if(front!==(sn>=0))continue;blob(c,cx+Math.cos(q[0])*rb,hz+sn*rb*.16-sr*.3,sr*1.25*q[1],L3([236,240,246],[255,214,160],hot*.6),L3([190,198,210],[226,160,110],hot*.5))}};
+  surge(false);
+  const colH=Rk*3.4*z*Math.pow(Math.sin(Math.PI*clamp(tau/5,0,1)),.7),colR=Rk*1.2*z;
+  if(colH>1){g=c.createLinearGradient(cx-colR,0,cx+colR,0);const wc=rgbs(L3([240,244,250],[255,220,170],hot*.6));g.addColorStop(0,'rgba(170,184,204,.5)');g.addColorStop(.4,`rgba(${wc},.65)`);g.addColorStop(1,'rgba(150,164,186,.5)');c.fillStyle=g;
+    c.beginPath();c.moveTo(cx-colR*1.2,hz);c.quadraticCurveTo(cx-colR,hz-colH*.5,cx-colR*.9,hz-colH);c.lineTo(cx+colR*.9,hz-colH);c.quadraticCurveTo(cx+colR,hz-colH*.5,cx+colR*1.2,hz);c.fill();
+    for(let j=0;j<6;j++)puff(c,cx+(j-2.5)/2.5*colR,hz-colH,colR*.55,wc,.8)}
+  const sR=(capR*.15+Rf*.12)*z;
+  if(rise>0){g=c.createLinearGradient(cx-sR*1.8,0,cx+sR*1.8,0);const mid=rgbs(L3([255,184,104],[156,138,128],cool)),edg=rgbs(L3([196,92,40],[98,88,88],cool));g.addColorStop(0,`rgb(${edg})`);g.addColorStop(.42,`rgb(${mid})`);g.addColorStop(1,`rgb(${edg})`);c.fillStyle=g;
+    c.beginPath();c.moveTo(cx-sR*1.9,hz);c.quadraticCurveTo(cx-sR*.95,hz-(hz-cy)*.3,cx-sR*.95,cy);c.lineTo(cx+sR*.95,cy);c.quadraticCurveTo(cx+sR*.9,hz-(hz-cy)*.3,cx+sR*1.9,hz);c.fill();
+    for(let j=0;j<32;j++){const q=BL.stem[j%16],f=(j/32+tau*.045)%1,y=hz+(cy-hz)*f,wk=sR*(.85+1.1*Math.pow(1-f,3));blob(c,cx+q[0]*wk*(j<16?1.1:-.9),y,wk*.62*q[1],L3([255,206,130],[168,152,144],cool),L3([226,120,50],[112+q[2]*14,100+q[2]*12,98+q[2]*10],cool),hot>.4?.35:-.35)}
+    c.globalCompositeOperation='lighter';for(const q of BL.emb){const f=(q[1]+tau*.12*(.5+q[2]))%1;c.fillStyle=`rgba(255,200,120,${hot*.8*(1-f)})`;c.fillRect(cx+q[0]*sR*1.6,hz+(cy-hz)*f,1.6,1.6)}c.globalCompositeOperation='source-over';
+    if(o.fus&&s2>.12){const al=.5*Math.sin(Math.PI*clamp((s2-.12)/.75,0,1)),rx=sR*2.4*(1+s2);c.strokeStyle=`rgba(255,255,255,${al})`;c.lineWidth=3;c.beginPath();c.ellipse(cx,hz+(cy-hz)*.55,rx,rx*.14,0,0,7);c.stroke()}}
+  const fbA=clamp(1-(tau-1)/1.4,0,1),lr=Math.min(ch*.62,cw*.3);
+  if(fbA<1){c.globalAlpha=1-fbA;
+    const row=front=>{for(const q of BL.lump){const sn=Math.sin(q[0]);if(front!==(sn>=0))continue;const r=lr*q[1]*(1+.05*Math.sin(tau*1.7+q[2]*9));
+      blob(c,cx+Math.cos(q[0])*cw*.74,cy+sn*ch*.6+(front?ch*.12:0),r,L3(L3([255,236,176],front?[176,160,156]:[220,204,198],cool),[255,226,216],front?0:dawn*cool*.7),L3([255,140,50],[98+q[2]*20,88+q[2]*16,90+q[2]*14],cool),front&&hot>.25?.4:-.35)}};
+    row(false);
+    g=c.createRadialGradient(cx-cw*.2,cy-ch*.3,0,cx,cy,cw*.85);g.addColorStop(0,`rgb(${rgbs(L3([255,240,190],[206,190,184],cool))})`);g.addColorStop(1,`rgb(${rgbs(L3([255,160,70],[120,108,108],cool))})`);c.fillStyle=g;c.beginPath();c.ellipse(cx,cy,cw*.8,ch*.72,0,0,7);c.fill();
+    BL.lump.forEach((q,i)=>{if(i%2)return;blob(c,cx+Math.cos(q[0])*cw*.4,cy+Math.sin(q[0])*ch*.3-ch*.12,lr*1.15*q[1],L3(L3([255,240,190],[214,198,192],cool),[255,226,216],dawn*cool*.7),L3([255,170,80],[128+q[2]*16,116+q[2]*12,116+q[2]*10],cool))});
+    row(true);
+    c.globalCompositeOperation='lighter';c.fillStyle=`rgba(255,140,50,${.7*hot})`;c.beginPath();c.ellipse(cx,cy+ch*.45,cw*.55,ch*.28,0,0,7);c.fill();c.globalCompositeOperation='source-over';c.globalAlpha=1}
+  if(fbA>0){c.save();c.beginPath();c.rect(-20,-20,W+40,hz+20);c.clip();c.globalAlpha=fbA;
+    g=c.createRadialGradient(cx,cy,0,cx,cy,Rp);g.addColorStop(0,'#fffef2');g.addColorStop(.45,'#fff0b4');g.addColorStop(.8,'#ffb24a');g.addColorStop(1,'rgba(255,104,24,.95)');c.fillStyle=g;c.beginPath();c.arc(cx,cy,Rp,0,7);c.fill();
+    for(const m of BL.mot)puff(c,cx+Math.cos(m[0]+tau*.3)*m[1]*Rp,cy+Math.sin(m[0]+tau*.3)*m[1]*Rp,m[2]*Rp,'206,74,12',.55*clamp(tau/1.5,0,1));
+    c.restore();c.globalAlpha=1}
+  c.globalCompositeOperation='lighter';puff(c,cx,cy,Math.max(Rp,ch)*1.25,'255,240,200',Math.pow(hot,1.5));c.globalCompositeOperation='source-over';
+  if(Y>=1000&&s2>.1&&s2<.9){c.fillStyle=`rgba(255,255,255,${.55*Math.sin(Math.PI*(s2-.1)/.8)})`;c.beginPath();c.ellipse(cx,cy-ch*1.2,cw*.7,ch*.16,0,0,7);c.fill()}
+  if(tau>.5&&tau<2.4&&!o.fizz){const al=(o.fus?.45:.28)*Math.sin(Math.PI*(tau-.5)/1.9),wr=Rk*(2.2+1.8*tau)*z;c.save();c.beginPath();c.rect(-20,-20,W+40,hz+20);c.clip();g=c.createRadialGradient(cx,hz,wr*.3,cx,hz,wr);g.addColorStop(0,`rgba(255,255,255,${al*.5})`);g.addColorStop(.85,`rgba(255,255,255,${al})`);g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.beginPath();c.ellipse(cx,hz,wr,wr*.6,0,0,7);c.fill();c.restore()}
+  surge(true);
+  c.save();c.beginPath();c.rect(-20,-20,W+40,hz+20);c.clip();c.strokeStyle=`rgba(255,255,255,${Math.max(0,.32-tau*.04)})`;c.lineWidth=2;c.beginPath();c.arc(cx,hz,Rk*(1+6*Math.pow(tau,.75))*z,0,7);c.stroke();c.restore();
+  const ox=W*.17,oy=H*.94;c.fillStyle='#04070d';c.beginPath();c.moveTo(ox-44,oy-7);c.lineTo(ox+40,oy-7);c.lineTo(ox+30,oy+4);c.lineTo(ox-36,oy+4);c.fill();c.fillRect(ox-12,oy-19,18,12);c.fillRect(ox-3,oy-34,2,16);
+  c.fillStyle='#ffd98a';c.fillRect(ox-9,oy-15,3,2);c.fillRect(ox-2,oy-15,3,2);
+  if(tau>3.2&&tau<4.3){const k=(tau-3.2)/1.1;c.fillStyle=`rgba(255,255,255,${.4*(1-k)})`;c.fillRect(-20,hz+(H-hz)*k,W+40,7)}
+  vignette(c,W,H,.4);
+  const fa=tau<.07?1:tau<.18?.45:Math.max(0,1-(tau-.18)/1.1);if(fa>0){c.fillStyle=`rgba(255,255,255,${fa})`;c.fillRect(-20,-20,W+40,H+40)}
+  hud(c,['HATÓERŐ   '+yTxt(Y),'TŰZGÖMB   '+(Rf<.5?f0(2*Rf*1000)+' m':f1(2*Rf)+' km'),'FELHŐTETŐ '+f1(top)+' km']);
+  let bl=.1;for(const v of[.2,.5,1,2,5,10,20,50])if(v*z<=W*.3)bl=v;
+  c.strokeStyle='#e9e4d6';c.lineWidth=2;c.beginPath();c.moveTo(W-16-bl*z,H-20);c.lineTo(W-16,H-20);c.moveTo(W-16-bl*z,H-25);c.lineTo(W-16-bl*z,H-15);c.moveTo(W-16,H-25);c.lineTo(W-16,H-15);c.stroke();
+  c.fillStyle='#e9e4d6';c.font='11px IBM Plex Mono,monospace';c.textAlign='right';c.fillText(bl<1?bl*1000+' m':bl+' km',W-16,H-30);c.textAlign='left';
+}
+const LAND=[[.22,.46,.09,0],[.28,.52,.10,0],[.24,.58,.07,0],[.33,.45,.06,0],[.50,.20,.09,1],[.58,.24,.10,1],[.64,.18,.07,1],[.45,.26,.05,1],
+  [.76,.36,.11,2],[.84,.42,.11,2],[.80,.50,.08,2],[.90,.34,.07,2],[.72,.46,.06,2],[.38,.76,.07,3],[.44,.80,.06,3],[.40,.70,.04,3],[.10,.80,.06,4],[.62,.72,.07,4],[.68,.78,.05,4],[.12,.20,.05,4]];
+const LCOL=['#2f7a66','#52688f','#84505c','#8a7a48','#34414f'];
+const LANDP=LAND.map((L,i)=>Array.from({length:30},(_,j)=>{const a=j/30*Math.PI*2,k=1+.17*Math.sin(3*a+i*1.7)+.1*Math.sin(5*a+i*2.9)+.05*Math.sin(9*a+i*.6);return[Math.cos(a)*k,Math.sin(a)*k*.8]}));
+function landPath(c,i,W,H){const L=LAND[i];c.beginPath();for(const q of LANDP[i])c.lineTo(L[0]*W+q[0]*L[2]*W,L[1]*H+q[1]*L[2]*W);c.closePath()}
+function label(c,t,x,y,W){const w=t.length*6.2+10;x=clamp(x-w/2,3,W-w-3);c.fillStyle='rgba(8,16,30,.72)';c.fillRect(x,y-10,w,14);c.fillStyle='#e9e4d6';c.fillText(t,x+5,y+1)}
+function drawWorld(c,W,H,t=0){
+  const g=c.createRadialGradient(W*.5,H*.45,0,W*.5,H*.45,W*.8);g.addColorStop(0,'#123a5c');g.addColorStop(1,'#07111f');c.fillStyle=g;c.fillRect(0,0,W,H);
+  c.strokeStyle='rgba(99,211,230,.08)';c.lineWidth=1;for(let i=1;i<8;i++){const x=i*W/8;c.beginPath();c.moveTo(x,0);c.quadraticCurveTo(x+(x-W/2)*.18,H/2,x,H);c.stroke()}for(let i=1;i<6;i++){c.beginPath();c.moveTo(0,i*H/6);c.lineTo(W,i*H/6);c.stroke()}
+  for(let i=0;i<LAND.length;i++){landPath(c,i,W,H);c.strokeStyle='rgba(120,220,240,.16)';c.lineWidth=7;c.stroke()}
+  for(let i=0;i<LAND.length;i++){const o=LAND[i][3],dead=o>0&&o<4&&S.riv[o-1].dead;landPath(c,i,W,H);c.fillStyle=dead?'#2a2f38':LCOL[o];c.fill()}
+  for(let i=0;i<LAND.length;i++){const L=LAND[i];c.save();landPath(c,i,W,H);c.clip();puff(c,L[0]*W-L[2]*W*.3,L[1]*H-L[2]*W*.3,L[2]*W*1.1,'255,255,255',.13);c.restore()}
+  c.font='10px IBM Plex Mono,monospace';
+  for(const R of S.riv){if(R.dead)continue;const x=R.mx*W,y=R.my*H;
+    c.setLineDash(R.war?[]:[3,5]);c.strokeStyle=R.war?'rgba(255,93,77,.9)':reach(R).length?'rgba(123,212,138,.65)':'rgba(143,160,184,.28)';c.lineWidth=R.war?2:1;c.beginPath();c.moveTo(HOME[0]*W,HOME[1]*H);c.quadraticCurveTo((HOME[0]*W+x)/2,(HOME[1]*H+y)/2-H*.08,x,y);c.stroke();c.setLineDash([]);
+    const col=R.treaty?'123,212,138':R.tens>65?'255,93,77':R.tens>35?'255,138,43':'143,160,184';
+    if(R.tens>65&&!R.treaty){const pu=(t*.8)%1;c.strokeStyle=`rgba(${col},${1-pu})`;c.lineWidth=1.5;c.beginPath();c.arc(x,y,10+9*pu,0,7);c.stroke()}
+    puff(c,x,y,16,col,.35);c.strokeStyle=`rgb(${col})`;c.lineWidth=2.5;c.beginPath();c.arc(x,y,9,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.max(.04,R.tens/100));c.stroke();
+    c.fillStyle='#e9e4d6';c.beginPath();c.moveTo(x,y-4);c.lineTo(x+4,y);c.lineTo(x,y+4);c.lineTo(x-4,y);c.fill();label(c,R.n,x,y-18,W)}
+  for(const A of S.al){const x=A.mx*W,y=A.my*H;c.strokeStyle=A.ally?'#7bd48a':'rgba(143,160,184,.6)';c.lineWidth=1.5;c.beginPath();c.arc(x,y,5,0,7);c.stroke();if(A.ally){c.fillStyle='#7bd48a';c.beginPath();c.arc(x,y,2,0,7);c.fill()}}
+  S.cities.forEach((ct,i)=>{const x=ct.mx*W,y=ct.my*H,rr=1.5+Math.sqrt(Math.max(0,ct.p))*1.4;puff(c,x,y,rr*3.2+1.2*Math.sin(t*2+i),'255,217,138',.55);c.fillStyle='#fff3cf';c.beginPath();c.arc(x,y,rr*.7,0,7);c.fill()});
+  label(c,'HAZÁD',HOME[0]*W,HOME[1]*H+34,W);
+  vignette(c,W,H,.45);
+}
+function drawShots(c,W,H,t){
+  for(const s of PB.ex){const p=(t-s.t0)/2.2;if(p<0)continue;
+    const x0=s.f[0]*W,y0=s.f[1]*H,x1=s.to[0]*W,y1=s.to[1]*H,mx=(x0+x1)/2,my=(y0+y1)/2-.3*Math.hypot(x1-x0,y1-y0);
+    const end=s.res==='fail'?.25:s.res==='int'?.78:1,q=Math.min(p,end),B=u=>[(1-u)*(1-u)*x0+2*u*(1-u)*mx+u*u*x1,(1-u)*(1-u)*y0+2*u*(1-u)*my+u*u*y1];
+    c.strokeStyle=s.f===HOME?'rgba(99,211,230,.85)':'rgba(255,120,90,.85)';c.lineWidth=1.5;c.beginPath();for(let u=Math.max(0,q-.4);u<=q;u+=.02){const b=B(u);c.lineTo(b[0],b[1])}c.stroke();
+    const b=B(q);
+    if(p<end){c.fillStyle='#fff';c.beginPath();c.arc(b[0],b[1],2,0,7);c.fill()}
+    else{const k=Math.min(1,(p-end)/.5);
+      if(s.res==='hit'){burst(c,b[0],b[1],6+16*k,k*.6);c.fillStyle='rgba(255,140,60,.85)';c.beginPath();c.arc(b[0],b[1],3,0,7);c.fill()}
+      else if(k<1){c.strokeStyle=`rgba(255,255,255,${1-k})`;c.beginPath();c.arc(b[0],b[1],3+8*k,0,7);c.stroke()}}}
+}
+function hud(c,lines){c.font='12px IBM Plex Mono,monospace';c.fillStyle='rgba(13,23,38,.6)';c.fillRect(10,10,178,lines.length*17+10);c.fillStyle='#63d3e6';lines.forEach((l,i)=>c.fillText(l,18,28+i*17))}
+
+/* ---------- Lejátszás ---------- */
+function play(info){
+  const cv=$('cv');$('fly').hidden=false;$('res').hidden=true;$('skip').hidden=false;
+  const dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;
+  PB={...info,W,H,dpr,t0:performance.now(),i:0,puffs:[],done:false};
+  if(info.ex)PB.exDur=(info.ex.length?Math.max(...info.ex.map(s=>s.t0)):0)+3.4;
+  if(info.res){
+    const r=info.res,p=r.pts,end=r.out==='burnup'?r.burnT:p[p.length-1].t;
+    let tc=end;for(const q of p)if(q.h>20e3){tc=q.t;break}
+    tc=Math.min(tc,end,70);PB.tc=tc;PB.end=end;
+    if(r.out==='nolift'){PB.T1=3.5;PB.T2=0}
+    else if(r.out==='fail'&&r.failT<=tc+.5){PB.tc=r.failT;PB.boomAt=4.5;PB.T1=6.8;PB.T2=0}
+    else{PB.T1=6.5;PB.T2=r.out==='orbit'?11:8}
+    mapSetup(W,H);
+    if(r.out==='impact'||r.out==='crash'){const w=r.B.w,det=r.out==='impact';
+      PB.blast={y:det?w.y:0,nuc:det&&w.nuc,fus:det&&w.fus,lead:1.2,dur:det&&w.nuc?14:4.5,
+        off:info.miss!=null&&det&&w.y?-info.miss/effR(w.y):0,offKm:info.miss!=null?-info.miss:null}}
+  }
+  SND.scene(PB);requestAnimationFrame(frame);
+}
+function frame(now){
+  if(!PB||PB.done)return;const c=$('cv').getContext('2d'),W=PB.W,H=PB.H,rt=Math.max(0,(now-PB.t0)/1000);c.setTransform(PB.dpr,0,0,PB.dpr,0,0);
+  if(PB.ex){
+    if(rt<PB.exDur){c.fillStyle='#050a14';c.fillRect(0,0,W,H);const mh=Math.min(H*.62,W);c.save();c.translate(0,(H-mh)/2);drawWorld(c,W,mh,rt);drawShots(c,W,mh,rt);c.restore();const dn=k=>PB.ex.filter(q=>q.res===k&&rt>=q.t0+2.2*(k==='hit'?1:k==='int'?.78:.25)).length;hud(c,['INDÍTVA   '+PB.ex.filter(q=>rt>=q.t0).length,'ELFOGVA   '+dn('int'),'TALÁLAT   '+dn('hit')])}
+    else if(PB.blast&&rt<PB.exDur+PB.blast.lead+PB.blast.dur)drawBlast(c,W,H,rt-PB.exDur,PB.blast);
+    else return finish();
+    return requestAnimationFrame(frame)}
+  if(PB.test){drawBlast(c,W,H,rt,PB.test);if(rt>PB.test.lead+PB.test.dur)return finish()}
+  else{
+    const r=PB.res;
+    if(rt<PB.T1){const u=Math.min(1,rt/(PB.boomAt||PB.T1)),st=stAt(PB.tc*Math.pow(u,1.6));drawChase(c,W,H,st,rt);tele(c,st)}
+    else if(rt<PB.T1+PB.T2){const u=(rt-PB.T1)/PB.T2,st=stAt(PB.tc+(PB.end-PB.tc)*u),bad=r.out==='fail'||r.out==='burnup';
+      drawMap(c,W,H,st,bad&&u>.93?(u-.93)/.07:0);tele(c,st)}
+    else if(PB.blast&&rt<PB.T1+PB.T2+PB.blast.lead+PB.blast.dur)drawBlast(c,W,H,rt-PB.T1-PB.T2,PB.blast);
+    else return finish();
+  }
+  requestAnimationFrame(frame);
+}
+function tele(c,st){const mm=Math.floor(st.t/60),ss=Math.floor(st.t%60);
+  hud(c,[`T+ ${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`,`MAGASSÁG  ${f1(st.h/1000)} km`,`SEBESSÉG  ${f0(st.v)} m/s`,`LŐTÁV     ${f1(RE*Math.atan2(st.x,st.y)/1000)} km`,st.sep?'TEHER LEVÁLT':st.b?`FOKOZAT ${st.si+1} ÉG`:'HAJTÓMŰ ÁLL'])}
+function finish(){
+  if(!PB||PB.done)return;PB.done=true;$('skip').hidden=true;
+  $('res').innerHTML=`<div class="eyebrow">${PB.ex?'Helyzetjelentés':PB.test?'Próbatér':'Repülési jegyzőkönyv'}</div><h2>${PB.title}</h2><p>${PB.txt}</p>
+    ${PB.rows.length?`<div class="grid">${PB.rows.map(r=>`<div><span>${r[0]}</span>${r[1]}</div>`).join('')}</div>`:''}
+    ${(PB.won||[]).map(m=>`<p><span class="pill ok">Feladat teljesítve</span> ${m.n}: +${m.rw} M${m.inc?`, a negyedéves bevétel ${m.inc} M-mel nő`:''}.</p>`).join('')}
+    <button class="act" data-a="close">Tovább</button>`;
+  $('res').hidden=false;
+}
+
+/* ---------- Bővítés: menü, hang, események, kitüntetések, tervtár, végjáték ---------- */
+let OV=null,LC=0,TQ=[];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const DIFF={
+  e:{n:'Kadét',d:'Bővebb keret, lassabban fegyverkező riválisok. Pontszorzó 0,7.',m:180,i:36,g:.7,a:-.1,sc:.7},
+  n:{n:'Főkonstruktőr',d:'A kiegyensúlyozott alapjáték. Pontszorzó 1.',m:120,i:30,g:1,a:0,sc:1},
+  h:{n:'Vaskéz',d:'Szűk keret, gyorsan fegyverkező, támadó kedvű riválisok. Pontszorzó 1,4.',m:100,i:26,g:1.3,a:.1,sc:1.4}};
+function newGame(diff,name){
+  const D=DIFF[diff]||DIFF.n,opt=S.opt;S=fresh();S.opt={...S.opt,...opt};S.diff=DIFF[diff]?diff:'n';S.name=name;S.money=D.m;S.income=D.i;
+  S.riv.forEach(R=>{R.gr*=D.g;R.aggr+=D.a});
+  S.log=[`Megnyílt a lőtér${name?': '+name:''}. Az első feladat: 100 km fölé jutni.`];LC=0;TQ=[];
+}
+
+/* Hang: minden hangot a böngésző szintetizál, hangfájl nincs */
+const SND={ctx:null,sc:null,
+  on(){return S.opt.snd!==0&&!!this.ctx},
+  init(){if(S.opt.snd===0)return;try{
+    if(!this.ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;this.ctx=new C();this.out=this.ctx.createGain();this.out.gain.value=.6;this.out.connect(this.ctx.destination);
+      const n=this.ctx.sampleRate*2,b=this.ctx.createBuffer(1,n,this.ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;this.nb=b}
+    if(this.ctx.state==='suspended')this.ctx.resume()}catch(e){this.ctx=null}},
+  tone(f,at,dur,vol=.07,type='sine',f2,dest){if(!this.on())return;try{const c=this.ctx,t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(dest||this.out);o.start(t);o.stop(t+dur+.05)}catch(e){}},
+  noise(at,dur,vol,f1,f2,dest,att=.05){if(!this.on())return;try{const c=this.ctx,t=c.currentTime+at,s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=this.nb;s.loop=true;fl.type='lowpass';
+    fl.frequency.setValueAtTime(f1,t);fl.frequency.exponentialRampToValueAtTime(f2,t+dur);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    s.connect(fl);fl.connect(g);g.connect(dest||this.out);s.start(t);s.stop(t+dur+.05)}catch(e){}},
+  click(){this.tone(880,0,.05,.025,'triangle')},
+  ok(){[523,659,784,1047].forEach((f,i)=>this.tone(f,i*.09,.28,.06,'triangle'))},
+  bad(){this.tone(220,0,.4,.07,'sawtooth',110)},
+  alarm(){for(let i=0;i<3;i++){this.tone(740,i*.5,.22,.06,'square');this.tone(555,i*.5+.25,.22,.06,'square')}},
+  boom(at,size,dest){this.noise(at,1.2+5*size,.5+.4*size,900-500*size,40,dest,.02);this.tone(90-30*size,at,1+3*size,.5,'sine',30,dest)},
+  stop(){if(this.sc&&this.ctx){try{const g=this.sc.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(0,t+.4)}catch(e){}}this.sc=null},
+  scene(P){this.stop();if(!this.on())return;try{
+    const d=this.ctx.createGain();d.gain.value=1;d.connect(this.out);this.sc=d;
+    const bl=(b,at)=>{if(!b)return;
+      if(b.tower)for(let i=0;i<Math.floor(b.lead);i++)this.tone(660,at+b.lead%1+i,.12,.05,'square',0,d);
+      const real=b.nuc&&!b.fizz;this.boom(at+b.lead,real?Math.min(1,.45+.12*Math.log10(Math.max(1,b.y))):b.y>0||b.nuc?.15:.06,d);
+      if(real)this.noise(at+b.lead+3.2,5,.7,320,30,d,.05)};
+    if(P.ex){P.ex.forEach(s=>this.noise(s.t0,1.2,.1,1200,200,d,.2));bl(P.blast,P.exDur)}
+    else if(P.test)bl(P.test,0);
+    else{if(P.res.out==='nolift')this.bad();else{const T=P.boomAt||P.T1;this.noise(0,T+.6,.55,180,700,d,1.2);this.tone(55,0,T,.2,'sawtooth',95,d)}
+      if(P.boomAt)this.boom(P.boomAt,.3,d);bl(P.blast,P.T1+P.T2)}
+  }catch(e){}}};
+
+/* Értesítések: lejátszás alatt várnak, hogy ne lőjék le a végeredményt */
+function toast(t,k){TQ.push({t,k:k||'ok'})}
+function flushToasts(){if(!TQ.length)return;const now=Date.now();if(TQ.some(q=>!q.u))TQ.some(q=>q.k==='bad')?SND.alarm():SND.ok();
+  TQ.forEach(q=>{if(!q.u)q.u=now+3600});TQ=TQ.filter(q=>q.u>now).slice(-4);
+  drawToasts();setTimeout(()=>{const n=Date.now();TQ=TQ.filter(q=>!q.u||q.u>n);drawToasts()},3700)}
+let TH='';function drawToasts(){const h=TQ.filter(q=>q.u).map(q=>`<div class="tst ${q.k}">${esc(q.t)}</div>`).join('');if(h!==TH){TH=h;$('toast').innerHTML=h}}
+
+/* Krónika és statisztika */
+const HRE=/^(Feladat teljesítve|Szövetség:|Fegyverzetkorlátozási|Hadat üzentél|Vereség|Új típus hadrendben|Az ország összeomlott|Béke |Fehér béke)|sikeres próbája|csapást mért|Csapás .* ellen|támadást indított|fegyverszünetet kért|összeomlott|felmondta|embargót hirdetett/;
+function mile(t){S.hist.push({q:S.q,t});if(S.hist.length>90)S.hist.shift()}
+function histHook(t){LC++;if(HRE.test(t))mile(t)}
+function flightStat(r,miss){const st=S.st,good=!['fail','nolift','crash','burnup'].includes(r.out);
+  if(good){st.ok++;st.streak++;st.best=Math.max(st.best,st.streak)}else{st.fail++;st.streak=0}
+  if(r.out!=='nolift')st.maxApo=Math.max(st.maxApo,Math.min(r.apo/1e3,4e5));
+  if(r.out==='impact')st.maxRng=Math.max(st.maxRng,r.range/1e3);
+  if(miss!==null){const m=Math.abs(miss);if(st.miss==null||m<st.miss)st.miss=m}
+  achCheck()}
+const ACH=[
+  ['first','Első start','Az első indítás.',()=>S.launches>=1],
+  ['oops','Tanulópénz','Az első kudarccal végződő indítás.',()=>S.st.fail>=1],
+  ['karman','A határ fölött','Egy rakétád 100 km fölé jutott.',()=>S.st.maxApo>=100],
+  ['deep','Mélyűr','10 000 km-es csúcsmagasság.',()=>S.st.maxApo>=1e4],
+  ['needle','Tűhegy','Becsapódás a kijelölt céltól 100 méteren belül.',()=>S.st.miss!=null&&S.st.miss<=.1],
+  ['long','Fél világ','10 000 km-es lőtáv.',()=>S.st.maxRng>=1e4],
+  ['streak','Rutin','Tíz sikeres indítás egymás után.',()=>S.st.best>=10],
+  ['l50','Ötven start','Ötven indítás.',()=>S.launches>=50],
+  ['clock','Svájci óra','Egy hajtóműtípus elérte a 98%-os megbízhatóságot.',()=>Object.values(S.rel).some(v=>v>=.98)],
+  ['mt','Megatonna','Sikeres próba legalább 1 Mt hatóerővel.',()=>S.st.maxY>=1000],
+  ['orbit','Csipogás az égből','Az első műhold pályán.',()=>!!S.done.orbit],
+  ['moon','Lábnyom','Holdraszállás.',()=>!!S.done.moon],
+  ['rich','Teli kassza','1000 M a keretben.',()=>S.money>=1000],
+  ['pop','Harmincmillió','30 millió lakos.',()=>popTot()>=30],
+  ['tech','Mindent tudó','Minden kutatás kész.',()=>Object.keys(TECH).every(k=>S.tech[k])],
+  ['mis','Teljes program','Minden feladat teljesítve.',()=>MIS.every(m=>S.done[m.id])],
+  ['clean','Tiszta kéz','1975-ig egyszer sem vetettél be atomfegyvert.',()=>S.q>=72&&!S.st.nukes&&!S.emb],
+  ['peace','Békeszerző','Minden élő riválissal szerződés van érvényben.',()=>S.riv.every(r=>r.treaty||r.dead)&&S.riv.some(r=>r.treaty)],
+  ['win','Fegyverszünet','Megnyertél egy hagyományos háborút.',()=>S.st.wins>=1],
+  ['hit','Túlélő','Atomcsapás érte az országot, és a program folytatódott.',()=>Object.keys(S.nukedBy).length>0&&!S.over],
+  ['bp','Tervtáros','Öt terv a Tervtárban.',()=>S.bp.length>=5],
+  ['ally','Jó szomszéd','Mindhárom semleges ország a szövetségesed.',()=>S.al.every(a=>a.ally)]];
+function achCheck(silent){
+  S.st.maxY=Math.max(S.st.maxY,0,...Object.keys(S.tested).filter(k=>WH[k]).map(k=>WH[k].y));
+  for(const a of ACH)if(!S.ach[a[0]]&&a[3]()){S.ach[a[0]]=S.q+1;if(!silent)toast('Kitüntetés: '+a[1],'ach')}}
+const score=()=>Math.round((S.prestige*4+Object.keys(S.done).length*40+Object.keys(S.tech).length*10+popTot()*10+Math.max(0,netInc())+S.riv.filter(r=>r.treaty).length*120+S.al.filter(a=>a.ally).length*50+Object.keys(S.ach).length*25-S.st.nukes*15)*(DIFF[S.diff]||DIFF.n).sc);
+const rank=p=>p<600?'Gyakornok':p<1500?'Mérnök':p<2800?'Főkonstruktőr':p<4200?'Akadémikus':'A korszak építésze';
+const statGrid=()=>`<div class="grid"><div><span>Indítás</span>${S.launches}</div><div><span>Siker / kudarc</span>${S.st.ok} / ${S.st.fail}</div>
+  <div><span>Legjobb sorozat</span>${S.st.best}</div><div><span>Csúcsmagasság</span>${f0(S.st.maxApo)} km</div>
+  <div><span>Max. lőtáv</span>${f0(S.st.maxRng)} km</div><div><span>Legjobb találat</span>${S.st.miss==null?'nincs':f2(S.st.miss)+' km'}</div>
+  <div><span>Max. próba</span>${S.st.maxY?yTxt(S.st.maxY):'nincs'}</div><div><span>Feladatok</span>${Object.keys(S.done).length} / ${MIS.length}</div>
+  <div><span>Kutatások</span>${Object.keys(S.tech).length} / ${Object.keys(TECH).length}</div><div><span>Kitüntetések</span>${Object.keys(S.ach).length} / ${ACH.length}</div></div>`;
+
+/* Végjátékok: mindegyik egyszer jelenik meg, utána a játék szabadon folytatható */
+const ENDS={
+  moon:['Űrgyőzelem','A holdkomp úton van. Ami fegyverkezési versenynek indult, abból az évszázad legnagyobb utazása lett.',()=>!!S.done.moon],
+  peace:['Tartós béke','Minden riválissal szerződés köt össze. A rakéták a silókban maradnak, a lőtér a kutatóké.',()=>!!S.done.peace],
+  alone:['Egyedül a térképen','Nincs több rivális. A győzelem ára az ő városaikon mérhető, és ezt a pontszám sem felejti el.',()=>S.riv.every(r=>r.dead)],
+  time:['Záróértékelés, 1991','Harmincöt év telt el a lőtér megnyitása óta. A bizottság lezárja a program aktáit, és kimondja az ítéletét.',()=>S.q>=140]};
+function checkEnds(){if(S.over)return;for(const k in ENDS)if(!S.ends[k]&&ENDS[k][2]()){S.ends[k]=S.q+1;mile('Mérföldkő: '+ENDS[k][0]+'.');OV={v:'end',k};SND.ok();save();renderOv();return}}
+
+/* Döntési események */
+const hotRiv=()=>S.riv.filter(r=>!r.dead&&!r.war).sort((a,b)=>b.tens-a.tens)[0];
+const tensAll=x=>S.riv.forEach(r=>{if(!r.dead&&!r.war)r.tens=clamp(r.tens+x,0,100)});
+const relAll=x=>{for(const k in S.rel)S.rel[k]=Math.min(.98,S.rel[k]+x)};
+const resShift=n=>{if(S.research)S.research.left=Math.max(1,S.research.left+n)};
+const EV=[
+  {id:'defect',n:'Átállni kész mérnök',d:'Egy rivális hajtóműtervezője menedéket kér, és a jegyzetfüzeteit is hozná.',c:()=>S.q>4&&!!hotRiv(),o:[
+    ['Befogadod · 20 M',()=>{S.money-=20;relAll(.03);const R=hotRiv();if(R)R.tens=clamp(R.tens+10,0,100);return'befogadtad. Minden hajtómű megbízhatósága 3 százalékponttal nőtt, a feszültség emelkedett.'},20],
+    ['Udvariasan elutasítod',()=>{S.prestige+=3;return'elutasítottad. A gesztust külföldön méltányolták: +3 presztízs.'}]]},
+  {id:'strike',rep:1,n:'Munkabeszüntetés a szerelőcsarnokban',d:'A szerelők a túlórák miatt letették a szerszámot.',c:()=>S.launches>=5,o:[
+    ['Béremelés · −2 M alapkeret',()=>{S.income-=2;relAll(.02);return'béremelés. A gondosabb munka 2 százalékponttal javította a megbízhatóságot.'}],
+    ['Kivárod',()=>{resShift(1);S.builds.forEach(b=>b.left++);return'kivártad. A kutatás és minden építkezés egy negyedévet csúszik.'}]]},
+  {id:'press',rep:1,n:'Újságírók a kerítésnél',d:'Külföldi tudósítók kérnek belépést a lőtérre.',c:()=>Object.keys(S.tested).some(k=>WH[k]&&WH[k].nuc),o:[
+    ['Nyílt nap',()=>{S.prestige+=8;tensAll(5);return'nyílt nap. +8 presztízs, de a riválisok is jegyzeteltek: a feszültség nőtt.'}],
+    ['Hírzárlat',()=>{S.prestige-=3;return'hírzárlat. A találgatások ártottak: −3 presztízs.'}]]},
+  {id:'mine',n:'Új érclelőhely',d:'A geológusok gazdag telérre bukkantak a Bányaváros mellett.',c:()=>!!S.tech.matp,o:[
+    ['Állami bánya · 30 M',()=>{S.money-=30;S.mat+=2;return'állami kézbe vetted. +2 egység hasadóanyag.'},30],
+    ['Koncesszióba adod',()=>{S.money+=25;return'koncesszióba adtad. +25 M.'}]]},
+  {id:'uni',rep:1,n:'Diákpályázat',d:'A műszaki egyetem hallgatói olcsóbb mérési eljárást ajánlanak a futó kutatáshoz.',c:()=>!!S.research&&S.research.left>1,o:[
+    ['Ösztöndíj · 15 M',()=>{S.money-=15;resShift(-1);return'ösztöndíjat adtál. A kutatás egy negyedévvel gyorsul.'},15],
+    ['Nincs rá keret',()=>'elutasítva. A hallgatók csalódottan távoztak.']]},
+  {id:'flood',n:'Árvíz a Kikötővárosnál',d:'A folyó átszakította a gátat. A város a lőtér teherautóit és mérnökeit kéri.',c:()=>S.q>6,o:[
+    ['Mentés · 25 M',()=>{S.money-=25;S.prestige+=5;return'a lőtér részt vett a mentésben. +5 presztízs.'},25],
+    ['A program nem állhat le',()=>{S.cities[1].p*=.94;S.prestige-=5;return'a program nem állt le. A város népessége 6%-kal csökkent, −5 presztízs.'}]]},
+  {id:'spy',n:'Kémgyanú a tervezőirodán',d:'Az elhárítás szerint valaki fényképezi a rajzokat.',c:()=>S.q>8&&!!hotRiv(),o:[
+    ['Teljes átvilágítás · 15 M',()=>{S.money-=15;resShift(1);return'átvilágítás. A szivárgás megszűnt, a kutatás egy negyedévet csúszik.'},15],
+    ['Nincs idő rá',()=>{const R=hotRiv();if(R&&Math.random()<.5){R.y=Math.min(R.ymax,R.y*1.3);R.ars=Math.min(R.cap,R.ars+2);return'a rajzok kijutottak: '+R.n+' fegyverkezése felgyorsult.'}return'a gyanú alaptalannak bizonyult.'}]]},
+  {id:'film',n:'A filmstúdió ajánlata',d:'Játékfilmet forgatnának a műholdról, eredeti helyszínen.',c:()=>!!S.done.orbit,o:[
+    ['Forgathatnak',()=>{S.money+=20;S.prestige+=5;tensAll(3);return'a film elkészült. +20 M, +5 presztízs, a riválisok képkockánként elemzik.'}],
+    ['A lőtér nem díszlet',()=>'elutasítva. A titkok titkok maradtak.']]},
+  {id:'budget',rep:1,n:'Költségvetési vita',d:'A parlament a lőtér jövő évi keretéről szavaz. Mivel érvelsz?',c:()=>S.q>10,o:[
+    ['Tudomány és ipar',()=>{const x=S.done.orbit?6:2;S.income+=x;return`a polgári érvek hatottak. +${x} M alapkeret.`}],
+    ['Honvédelem',()=>{S.income+=4;tensAll(6);return'a védelmi érvek hatottak. +4 M alapkeret, de a riválisok felfigyeltek: a feszültség nőtt.'}]]},
+  {id:'expo',n:'Világkiállítás',d:'Az országot meghívták a világkiállításra. A lőtér adhatná a pavilon fő látványosságát.',c:()=>S.prestige>=30,o:[
+    ['Saját pavilon · 30 M',()=>{S.money-=30;S.prestige+=12;S.al.forEach(a=>a.rel=Math.min(100,a.rel+8));return'a pavilon siker. +12 presztízs, a semleges országok viszonya javult.'},30],
+    ['Kimaradsz',()=>'a kiállítás nélküled zajlott le.']]},
+  {id:'acc',rep:1,n:'Baleset a próbapadon',d:'Felrobbant egy hajtómű a földi próbán. Sérült nincs, a próbapad odalett.',c:()=>S.launches>=3,o:[
+    ['Alapos vizsgálat · 10 M',()=>{S.money-=10;const ks=Object.keys(ENG).filter(k=>!ENG[k].t||S.tech[ENG[k].t]).sort((a,b)=>S.rel[a]-S.rel[b]),k=ks[0];S.rel[k]=Math.min(.98,S.rel[k]+.04);return`a vizsgálat megtalálta a hibát. ${ENG[k].n}: +4 százalékpont megbízhatóság.`},10],
+    ['Tovább a menetrenddel',()=>{S.prestige-=4;return'a menetrend maradt, a hír kiszivárgott: −4 presztízs.'}]]},
+  {id:'summit',rep:1,n:'Meghívás csúcstalálkozóra',d:'A legfeszültebb rivális semleges helyszínen tárgyalna.',c:()=>{const R=hotRiv();return!!R&&R.tens>50&&R.ars>=2},o:[
+    ['Elmész · 15 M',()=>{S.money-=15;const R=hotRiv();if(R)R.tens=clamp(R.tens-15,0,100);return'a találkozó enyhülést hozott'+(R?': '+R.n+' feszültsége csökkent.':'.')},15],
+    ['Nem tárgyalsz nyomás alatt',()=>{S.prestige+=2;return'otthon keménységnek látták: +2 presztízs.'}]]}];
+function evCard(){if(!S.ev)return'';const E=EV.find(e=>e.id===S.ev);if(!E){S.ev=null;return''}
+  return`<section class="card" style="border-color:var(--flame)"><div class="eyebrow">Döntés</div><h2>${E.n}</h2><p>${E.d} A negyedév nem zárható le, amíg nem döntesz.</p>${E.o.map((o,i)=>`<button class="sec" data-a="evc" data-k="${i}" ${o[2]&&S.money<o[2]?'disabled':''}>${o[0]}</button>`).join('')}</section>`}
+function evChoose(i){const E=EV.find(e=>e.id===S.ev);if(!E||!E.o[i]||(E.o[i][2]&&S.money<E.o[i][2]))return;S.ev=null;S.evd[E.id]=S.q+1;log(E.n+': '+E.o[i][1]())}
+const FLAV=['Csendes negyedév a lőtéren.','Az időjárás kedvezett a hajtóműpróbáknak.','Iskolás csoportok látogattak a kilövőálláshoz.','Új menza nyílt a szerelőcsarnok mellett.','A meteorológusok tiszta eget ígérnek a következő indításokhoz.'];
+function extQuarter(n0){
+  let nw=S.log.slice(0,Math.min(8,LC-n0)).map(t=>t.replace(/^\d{4}: /,'')).reverse();
+  if(!nw.length){const R=S.riv.find(r=>!r.dead&&!r.treaty&&r.tens>65);
+    nw=[R?`${R.n}: csapatmozgásokról érkeznek hírek.`:S.money<0?'Az ellenzék a lőtér adósságát firtatja.':S.research?`A kutatócsoport éjszakába nyúlóan dolgozik: ${TECH[S.research.id].n}.`:FLAV[Math.floor(Math.random()*FLAV.length)]]}
+  S.news={q:qName(),h:nw.slice(0,3)};
+  if(S.evc>0)S.evc--;
+  if(!S.ev&&!S.crisis&&!S.over&&S.q>=3&&S.evc<=0&&Math.random()<.3){
+    const ok=EV.filter(e=>(!S.evd[e.id]||(e.rep&&S.q-S.evd[e.id]>=24))&&e.c());
+    if(ok.length){S.ev=ok[Math.floor(Math.random()*ok.length)].id;S.evc=4;toast('Döntés vár rád a Program lapon','ach')}}
+  if(S.crisis)toast('Válság: döntened kell','bad');
+  achCheck();
+}
+const newsCard=()=>S.news?`<section class="card news"><div class="eyebrow">Lőtéri Híradó · ${S.news.q}</div><h3>${S.news.h[0]}</h3>${S.news.h.slice(1).map(t=>`<p class="dim">${t}</p>`).join('')}</section>`:'';
+
+/* A főkonstruktőr tanácsa: mindig a következő értelmes lépés */
+const rsn=k=>!S.tech[k]&&!(S.research&&S.research.id===k);
+const TIPS=[
+  [()=>!S.launches,'Kezdd egy próbaindítással. A Tervezőben az alaprakéta készen áll: nyomd meg az Indítást, és nézd meg, meddig jut.','terv','Tervező'],
+  [()=>rsn('ball')&&!S.research,'Most vakon lősz. A ballisztikai számítógép már indítás előtt megmutatja a várható lőtávot és csúcsmagasságot.','kut','Kutatás'],
+  [()=>S.research&&S.q<2,'A kutatás és az építkezés csak a negyedév lezárásával halad. Indíts, amíg a keret engedi, aztán zárd le a negyedévet a lap alján.'],
+  [()=>!S.done.alt,'A 100 km-hez meredek pálya kell. Ha a rakéta nem éri el, vedd a dőlésszöget 0° felé, és adj több hajtóanyagot, amíg a tolóerő/súly arány 1,2 fölött marad.','terv','Tervező'],
+  [()=>!S.done.z300,'A 300 km-es lövéshez jelöld ki a célt a Tervezőben. A dőlésszög adja a pálya alakját, az utolsó fokozat leállításával finomítod a lőtávot.','terv','Tervező'],
+  [()=>!S.bld.ipar&&!S.builds.some(b=>b.b&&b.k==='ipar'),'A jutalmak elfogynak, a bevétel megmarad. Egy ipari park negyedévente 10 M-et hoz.','anyag','Gazdaság'],
+  [()=>rsn('g1')&&!S.research,'A tehetetlenségi irányítás negyedére csökkenti a szórást, és megnyitja az automata célzást.','kut','Kutatás'],
+  [()=>rsn('st2')&&!S.research,'Egy fokozattal 1500 km-re alig lehet eljutni. A fokozatleválasztással a rakéta útközben ledobja a holtsúlyt.','kut','Kutatás'],
+  [()=>S.done.z300&&rsn('hs1')&&!S.research,'1500 km-ről a visszatérő egység már izzásig hevül. Hőnyelő pajzs nélkül elég.','kut','Kutatás'],
+  [()=>S.done.z300&&rsn('matp')&&!S.research,'A töltetekhez hasadóanyag kell. Az ellátási lánc az Anyagprogrammal nyílik meg.','kut','Kutatás'],
+  [()=>S.tech.matp&&Math.min(S.mc.ore,S.mc.proc,S.mc.qc)<1,'A hasadóanyag-termelést a leggyengébb láncszem szabja meg. A szerződésből, a feldolgozóból és a laborból is kell legalább egy szint.','anyag','Gazdaság'],
+  [()=>S.riv.some(R=>R.ars>=2&&!R.treaty&&!R.dead)&&!arsN(),'A riválisok fegyverkeznek. Rendszeresíts egy töltettel szerelt rakétát a Tervezőben, és gyárts belőle a Világ lapon: elrettentés nélkül a válságokban csak engedni tudsz.','vilag','Világ'],
+  [()=>!S.bp.length&&S.launches>=6,'A bevált rakétát mentsd el a Tervtárba a Tervező lapon, így később egy koppintással visszahozod.','terv','Tervező']];
+function tipCard(){if(S.opt.tips===0||S.over)return'';const t=TIPS.find(t=>t[0]());if(!t)return'';
+  return`<section class="card tip"><div class="eyebrow">A főkonstruktőr tanácsa</div><p>${t[1]}</p><div class="fine">${t[2]?`<button class="sec" data-a="tab" data-k="${t[2]}">${t[3]}</button>`:''}<button class="sec" data-a="tips">Tanácsok kikapcsolása</button></div></section>`}
+
+/* Tervtár */
+function bpCard(){let h=`<section class="card"><h2>Tervtár</h2><div class="fine"><input type="text" id="bpn" maxlength="18" placeholder="Terv neve" aria-label="Terv neve"><button class="sec" data-a="bpsave" ${S.bp.length>=8?'disabled':''}>Mentés</button></div>`;
+  S.bp.forEach((b,i)=>{const B=build(b.d,sfm());h+=`<div class="tech"><div class="row"><h3>${esc(b.n)}</h3><span class="pill">${b.d.stages.length} fok. · ${f1(B.m0/1000)} t · Δv ${f0(B.dv)}</span></div><div class="fine"><button class="sec" data-a="bpload" data-k="${i}">Betöltés</button><button class="sec" data-a="bpdel" data-k="${i}">Törlés</button></div></div>`});
+  return h+`<p class="dim">${S.bp.length?`${S.bp.length} / 8 terv. A betöltés a teljes rakétát, a terhet és a repülési programot visszaállítja.`:'A jelenlegi rakétát név alatt elmentheted, és később egy koppintással visszahozhatod. Nyolc terv fér el.'}</p></section>`}
+
+/* Menü, címképernyő, mentéskód */
+const encSave=()=>btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+function renderOv(){const el=$('ov');el.hidden=!OV;if(!OV){el.innerHTML='';return}let h='';
+  if(OV.v==='title'){
+    h=`<div class="ttlwrap"><canvas id="tcv"></canvas><div class="ttl">Kísérleti <b>Lőtér</b></div><p class="dim">Rakétaprogram a hidegháború éveiből. Tervezz, indíts, tarts egyensúlyt, és döntsd el, mire való mindez.</p></div>
+      ${OV.has?`<button class="act" data-a="ovclose">Folytatás${S.name?' · '+esc(S.name):''} · ${qName()}</button>`:''}
+      <button class="${OV.has?'sec':'act'}" data-a="newopen">Új játék</button>
+      <p class="dim">A hangot a Menü Beállítások lapján kapcsolhatod ki. A játék minden lépés után ment ebben a böngészőben.</p>`}
+  else if(OV.v==='new'){
+    h=`<h2>Új program</h2><label for="pname">A program neve</label><input type="text" id="pname" maxlength="24" placeholder="például Hajnalcsillag" value="${esc(OV.name||'')}">
+      <div class="eyebrow">Nehézség</div>${Object.entries(DIFF).map(([k,D])=>`<button class="sec dif" data-a="diff" data-k="${k}" aria-pressed="${OV.diff===k}"><b>${D.n}</b><span class="dim">${D.d}</span></button>`).join('')}
+      ${OV.has?'<p><span class="pill bad">Figyelem</span> Az új program felülírja a mostani mentést.</p>':''}
+      <button class="act" data-a="newgo">Program indítása</button><button class="sec" data-a="${OV.back?'title':'ovclose'}">Vissza</button>`}
+  else if(OV.v==='end'){const E=ENDS[OV.k],p=score();
+    h=`<div class="eyebrow">Mérföldkő · ${qName()}</div><div class="ttl sm">${E[0]}</div><p>${E[1]}</p>
+      <section class="card"><div class="row"><h2>${f0(p)} pont</h2><span class="pill go">${rank(p)}</span></div>${statGrid()}<p class="dim">Nehézség: ${(DIFF[S.diff]||DIFF.n).n}. A pontszám tovább gyűjthető.</p></section>
+      <button class="act" data-a="ovclose">Tovább játszom</button>`}
+  else{const t=OV.tab,p=score();
+    h=`<div class="row"><h2>${S.name?esc(S.name):'Menü'}</h2><button class="sec" data-a="ovclose">Bezárás</button></div>
+      <div class="seg">${[['ach','Kitüntetések'],['hist','Krónika'],['set','Beállítások']].map(([k,n])=>`<button class="sec" data-a="ovtab" data-k="${k}" aria-pressed="${t===k}">${n}</button>`).join('')}</div>`;
+    if(t==='ach')h+=`<section class="card"><div class="eyebrow">${Object.keys(S.ach).length} / ${ACH.length} megszerezve</div>${ACH.map(a=>`<div class="tech ${S.ach[a[0]]?'':'lock'}"><div class="row"><h3>${a[1]}</h3>${S.ach[a[0]]?`<span class="pill ok">${1957+Math.floor((S.ach[a[0]]-1)/4)}</span>`:'<span class="pill">zárolva</span>'}</div><p class="dim">${a[2]}</p></div>`).join('')}</section>`;
+    else if(t==='hist')h+=`<section class="card"><div class="row"><h2>${f0(p)} pont</h2><span class="pill go">${rank(p)}</span></div>${statGrid()}<p class="dim">Nehézség: ${(DIFF[S.diff]||DIFF.n).n}. Záróértékelés 1991 végén; a játék utána is folytatható.</p></section>
+      <section class="card"><h2>Idővonal</h2><div class="log">${S.hist.length?S.hist.slice().reverse().map(x=>`<div><b>${1957+Math.floor(x.q/4)}</b> · ${x.t}</div>`).join(''):'<div>Még nincs bejegyzés. Ide kerülnek a teljesített feladatok, próbák, szerződések és háborúk.</div>'}</div></section>`;
+    else h+=`<section class="card"><h2>Beállítások</h2><div class="fine"><button class="sec" data-a="snd">Hang: ${S.opt.snd===0?'ki':'be'}</button><button class="sec" data-a="tips">Tanácsok: ${S.opt.tips===0?'ki':'be'}</button></div></section>
+      <section class="card"><h2>Mentéskód</h2><p class="dim">A mentés ebben a böngészőben él. A kóddal átviheted másik eszközre, vagy félreteheted biztonsági másolatnak.</p>
+      <textarea id="code" rows="4" aria-label="Mentéskód" placeholder="Ide illeszd be a kódot a betöltéshez">${OV.code||''}</textarea>
+      <div class="fine"><button class="sec" data-a="expc">Kód készítése</button><button class="sec" data-a="copyc">Másolás</button><button class="sec" data-a="impc">Betöltés</button></div>${OV.msg?`<p>${OV.msg}</p>`:''}</section>
+      <button class="sec" data-a="title">Főmenü</button>`}
+  el.innerHTML=h;
+  if(OV.v==='title'){try{const[c,W,H]=fit('tcv',.5);drawHero(c,W,H)}catch(e){}}
+}
+function extClick(a,k){
+  SND.init();if(!['launch','test','strike','cstrike','skip'].includes(a))SND.click();
+  if(a==='menu')OV={v:'menu',tab:'ach'};
+  else if(a==='ovtab'){OV.tab=k;OV.msg=''}
+  else if(a==='ovclose')OV=null;
+  else if(a==='title')OV={v:'title',has:1};
+  else if(a==='newopen')OV={v:'new',diff:S.diff||'n',back:1,has:OV&&OV.has};
+  else if(a==='diff'){OV.name=$('pname').value;OV.diff=k}
+  else if(a==='newgo'){newGame(OV.diff,($('pname').value||'').trim().slice(0,24));OV=null;save();render();return true}
+  else if(a==='snd'){S.opt.snd=S.opt.snd===0?1:0;if(S.opt.snd){SND.init();SND.ok()}else SND.stop();save()}
+  else if(a==='tips'){S.opt.tips=S.opt.tips===0?1:0;save();render();return true}
+  else if(a==='expc'){OV.code=encSave();OV.msg='A kód elkészült. Másold ki, és őrizd meg.'}
+  else if(a==='copyc'){const el=$('code');OV.code=el.value;try{navigator.clipboard.writeText(el.value).then(()=>{if(OV){OV.msg='A kód a vágólapon van.';renderOv()}},()=>{})}catch(e){}OV.msg='Ha a másolás nem sikerült, jelöld ki a mezőt, és másold kézzel.'}
+  else if(a==='impc'){try{const o=JSON.parse(decodeURIComponent(escape(atob($('code').value.trim()))));if(!o||!o.design||!o.rel||o.q==null)throw 0;OV=null;start(o);save();toast('Mentés betöltve')}catch(e){if(OV)OV.msg='<span class="pill bad">Hiba</span> A kód nem olvasható.'}render();return true}
+  else if(a==='evc'){evChoose(+k);save();render();return true}
+  else if(a==='bpsave'){if(S.bp.length<8){S.bp.push({n:($('bpn').value||'').trim().slice(0,18)||'Terv '+(S.bp.length+1),d:clone(S.design)});achCheck()}save();render();return true}
+  else if(a==='bpload'){if(S.bp[k]){S.design=clone(S.bp[k].d);depMsg=''}save();render();return true}
+  else if(a==='bpdel'){S.bp.splice(k,1);save();render();return true}
+  else return false;
+  renderOv();return true}
+function renderExt(){renderOv();if($('fly').hidden){if(!OV)checkEnds();flushToasts()}}
+function extStart(hot,had){const f=fresh();S.st={...f.st,...S.st};S.opt={...f.opt,...S.opt};LC=0;achCheck(true);for(const k in ENDS)if(had&&!S.ends[k]&&ENDS[k][2]())S.ends[k]=S.q+1;if(!hot)OV={v:'title',has:had}}
+
+/* ---------- Indulás ---------- */
+function start(snap){
+  let s=snap&&snap.q!=null?snap:null;
+  if(!s)try{s=JSON.parse(localStorage.getItem('loter1'))}catch(e){}
+  if(s&&s.design&&s.rel){S=Object.assign(fresh(),s,{rel:{...fresh().rel,...s.rel}});S.riv=S.riv.map(r=>({...fresh().riv.find(x=>x.id===r.id),...r}));
+  if(!s.v5){S.v5=1;const y0={N:20,K:50,D:15};for(const R of S.riv){const q=Math.max(0,R.t-R.t0);R.ars=Math.min(R.ars,R.cap,R.gr*q);R.y=Math.min(R.y,y0[R.id]*Math.pow(1.05,q));R.def=Math.min(R.def,.005*q)}}
+  if(!s.done){S.done={};['alt','z300','z1500','test','k1500','z5000','k9000','orbit'].slice(0,s.mission||0).forEach(i=>S.done[i]=1)}}
+  extStart(!!(snap&&snap.q!=null),!!(s&&s.design&&s.rel));render();
+}
+window.claude?.hot?.snapshot?.(()=>S);
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+</script>
+</body>
+</html>
