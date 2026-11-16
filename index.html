@@ -1114,23 +1114,11 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 const DIFF={
   e:{n:'Kadét',d:'Bővebb keret, lassabban fegyverkező riválisok. Pontszorzó 0,7.',m:180,i:36,g:.7,a:-.1,sc:.7},
   n:{n:'Főkonstruktőr',d:'A kiegyensúlyozott alapjáték. Pontszorzó 1.',m:120,i:30,g:1,a:0,sc:1},
-  h:{n:'Vaskéz',d:'Szűk keret, gyorsan fegyverkező, támadó kedvű riválisok. Pontszorzó 1,4.',m:100,i:26,g:1.3,a:.1,sc:1.4},
-  s:{n:'Homokozó',d:'Minden kutatás kész, minden épület a legmagasabb szinten, minden töltet minősítve, bőséges keret és hasadóanyag. A feladatok nyitva maradnak. Pontszám nem jár.',m:50000,i:500,g:1,a:0,sc:0,sb:1}};
+  h:{n:'Vaskéz',d:'Szűk keret, gyorsan fegyverkező, támadó kedvű riválisok. Pontszorzó 1,4.',m:100,i:26,g:1.3,a:.1,sc:1.4}};
 function newGame(diff,name){
   const D=DIFF[diff]||DIFF.n,opt=S.opt;S=fresh();S.opt={...S.opt,...opt};S.diff=DIFF[diff]?diff:'n';S.name=name;S.money=D.m;S.income=D.i;
   S.riv.forEach(R=>{R.gr*=D.g;R.aggr+=D.a});
   S.log=[`Megnyílt a lőtér${name?': '+name:''}. Az első feladat: 100 km fölé jutni.`];LC=0;TQ=[];
-  if(D.sb){
-    /* Homokozó: minden kifejlesztve, a feladatok és a riválisok változatlanok */
-    for(const k in TECH)S.tech[k]=1;
-    for(const k in BLD)S.bld[k]=BLD[k].c.length;
-    for(const k in MATS)S.mc[k]=MATS[k].c.length;
-    for(const k in WH)if(WH[k].nuc)S.tested[k]=1;
-    for(const k in S.rel)S.rel[k]=.98;
-    S.mat=200;
-    S.log=[`Megnyílt a homokozó${name?': '+name:''}. Minden kutatás, épület és töltet kész.`];
-    achCheck(true);
-  }
 }
 
 /* Hang: minden hangot a böngésző szintetizál, hangfájl nincs */
