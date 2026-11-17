@@ -381,7 +381,7 @@ function check(x){const won=[];for(const m of MIS){if(!isOpen(m))continue;let ok
     else if(m.k==='kill')ok=hit&&w.y>0&&Math.abs(x.miss)<=effR(w.y);
     else if(m.k==='orbit')ok=r.out==='orbit'&&(!m.minM||w.m>=m.minM)&&(!m.minRp||r.rp>=m.minRp*1e3)&&(!m.wh||x.d.wh===m.wh);
     else if(m.k==='escape')ok=r.out==='escape'&&(!m.wh||x.d.wh===m.wh);}
-  if(ok){S.done[m.id]=1;S.money+=m.rw;S.income+=m.inc;S.prestige+=10;log('Feladat teljesítve: '+m.n+'.');won.push(m);if(!x.r&&!x.test)toast('Feladat teljesítve: '+m.n)}}
+  if(ok){S.done[m.id]=1;if(UNIV_MIS.includes(m.id))univ.set('lo:'+m.id);S.money+=m.rw;S.income+=m.inc;S.prestige+=10;log('Feladat teljesítve: '+m.n+'.');won.push(m);if(!x.r&&!x.test)toast('Feladat teljesítve: '+m.n)}}
   return won}
 const gauss=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
 const qName=()=>`${1957+Math.floor(S.q/4)} · ${['I','II','III','IV'][S.q%4]}. negyedév`;
@@ -408,7 +408,7 @@ function vProg(){
   const op=MIS.filter(isOpen),dn=Object.keys(S.done).length;
   let h=`<section class="card hero"><canvas id="hero"></canvas><div class="herot"><div class="eyebrow">${qName()}</div><div class="big">${f1(popTot())} M lakos</div><div class="prog"><i style="width:${Math.round(dn/MIS.length*100)}%"></i></div><div class="eyebrow">${dn} / ${MIS.length} feladat</div></div></section>`;
   if(S.over)h+=`<section class="card" style="border-color:var(--bad)"><div class="eyebrow">Vége</div><h2>Az ország összeomlott</h2><p>A népesség 8 millió alá esett, a program nem folytatható.</p><button class="act" data-a="reset">${resetArm?'Koppints újra az új játékhoz':'Új játék'}</button></section>`;
-  h+=crisisCard()+evCard()+tipCard()+newsCard()+`<section class="card"><h2>Nyitott feladatok</h2>`;
+  h+=crisisCard()+evCard()+tipCard()+newsCard()+univCard()+`<section class="card"><h2>Nyitott feladatok</h2>`;
   h+=op.length?op.map(m=>`<div class="tech"><div class="row"><h3>${m.n}</h3><span class="pill go">+${m.rw} M${m.inc?`, bevétel +${m.inc}`:''}</span></div><p class="dim">${m.d}</p></div>`).join(''):`<p>Minden feladat kész. A lőtér nyitva marad: kísérletezz tovább szabadon.</p>`;
   h+=`</section><section class="card"><h2>Negyedév</h2>`;
   h+=S.research?`<p>Kutatás: <b>${TECH[S.research.id].n}</b>, még ${S.research.left} negyedév.</p>`:`<p class="dim">Nincs futó kutatás. A kutatás és az építkezés csak a negyedév lezárásával halad.</p>`;
@@ -786,6 +786,7 @@ document.addEventListener('click',e=>{
   if(a!=='reset')resetArm=false;if(a!=='strike'&&a!=='war')S.arm='';if(a!=='deploy')depMsg='';
   if(a==='tab')S.tab=k;
   else if(a==='endq'){if(S.crisis||S.ev||S.over)return;endQuarter()}
+  else if(a==='univ'){univGo();return}
   else if(a==='res'){if(S.research||S.money<tcost(k))return;S.money-=tcost(k);S.research={id:k,left:tq(k)}}
   else if(a==='mat'){const m=MATS[k],lv=S.mc[k];if(S.money<m.c[lv])return;S.money-=m.c[lv];S.builds.push({k,left:m.q})}
   else if(a==='bld'){const b=BLD[k],lv=S.bld[k]||0;if(lv>=b.c.length||S.money<b.c[lv]||S.builds.some(x=>x.b&&x.k===k))return;S.money-=b.c[lv];S.builds.push({k,left:b.q,b:1})}
@@ -1276,6 +1277,34 @@ const SND={ctx:null,sc:null,
 
 /* Értesítések: lejátszás alatt várnak, hogy ne lőjék le a végeredményt */
 function toast(t,k){TQ.push({t,k:k||'ok'})}
+// Közös napló a három játék között (Eseményhorizont, Kísérleti Lőtér, Raktár 3D). Mindhárom ugyanazon a webcímen fut
+// (buhallamate-del.github.io), ezért a böngésző tárhelye közös: amit az egyikben elérsz, a másik is látja.
+const UNIV_KEY = 'univerzum-naplo';
+const univ = {
+  get(){ try{ return JSON.parse(localStorage.getItem(UNIV_KEY)) || {}; }catch(_){ return {}; } },
+  has(k){ return !!this.get()[k]; },
+  set(k){ const n = this.get(); if (n[k]) return false; n[k] = Date.now(); try{ localStorage.setItem(UNIV_KEY, JSON.stringify(n)); }catch(_){} return true; },
+};
+// ha egy másik játékon belül futunk (az Eseményhorizont buborékjában), a kapu nem tölt be újra mindent, hanem visszaszól
+function univBeagyazva(){ try{ return window.parent !== window && window.parent.location.origin === location.origin; }catch(_){ return false; } }
+univ.set('lo:jart');
+// a Lőtér mérföldkövei a közös naplóba kerülnek; a szökési sebesség „furcsa jelet” hoz a mélyűrből
+const UNIV_MIS = ['orbit','crew','station','esc','moon'];
+function univGo(){ univ.set('lo:kapu');
+  if (univBeagyazva()){ window.parent.postMessage({type:'univ-vissza', from:'loter'}, location.origin); return; }
+  document.body.style.transition = 'opacity .8s, filter .8s'; document.body.style.opacity = '0'; document.body.style.filter = 'blur(6px) brightness(2)';
+  setTimeout(() => { location.href = '../Esemenyhorizont/?from=loter'; }, 800); }
+function univCard(){
+  const esc = S.done.esc || univ.has('lo:esc'), egg = univ.has('eh:egg:loter'), r3 = univ.has('r3:feketelyuk');
+  if (!esc && !egg && !r3) return '';
+  if (egg && !S.univBonus){ S.univBonus = 1; S.money += 100; log('Egy másik univerzumból kutatási támogatás érkezett: +100 M.'); toast('Jel egy másik univerzumból: +100 M'); }
+  if (r3 && !S.univP){ S.univP = 1; S.prestige += 20; log('Egy raktár pohármosójában apró fekete lyukat találtak. Az Akadémia felfigyelt: +20 presztízs.'); }
+  let h = `<section class="card" style="border-color:#7a5cff"><div class="eyebrow" style="color:#b9a3ff">Három univerzum</div>`;
+  if (esc) h += `<h2>Furcsa jel a mélyűrből</h2><p class="dim">A holdszonda jele nem halkult el, hanem visszhangzik – mintha valami elhajlítaná a pályáját. A követőállomások szerint egy fekete lyuk felé tart.</p><button class="act" data-a="univ">Kövesd a jelet ↗</button>`;
+  else h += `<p class="dim">Holdszondát még nem indítottál. Akinek sikerül szökési sebességre gyorsítani egy terhet, annak furcsa jel érkezik a mélyűrből.</p>`;
+  if (egg) h += `<p class="dim" style="margin-top:10px">Egy másik univerzumban, egy fekete lyuk mögötti buborékban rád találtak. A kutatási támogatás (+100 M) megérkezett.</p>`;
+  if (r3) h += `<p class="dim" style="margin-top:10px">Hír: egy raktár pohármosójában apró fekete lyukat találtak. Az Akadémia felfigyelt (+20 presztízs).</p>`;
+  return h + `</section>`; }
 function flushToasts(){if(!TQ.length)return;const now=Date.now();if(TQ.some(q=>!q.u))TQ.some(q=>q.k==='bad')?SND.alarm():SND.ok();
   TQ.forEach(q=>{if(!q.u)q.u=now+3600});TQ=TQ.filter(q=>q.u>now).slice(-4);
   drawToasts();setTimeout(()=>{const n=Date.now();TQ=TQ.filter(q=>!q.u||q.u>n);drawToasts()},3700)}
