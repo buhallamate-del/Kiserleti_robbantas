@@ -1296,8 +1296,9 @@ function univGo(){ univ.set('lo:kapu');
   document.body.style.transition = 'opacity .8s, filter .8s'; document.body.style.opacity = '0'; document.body.style.filter = 'blur(6px) brightness(2)';
   setTimeout(() => { location.href = '../Esemenyhorizont/?from=loter'; }, 800); }
 function univCard(){
-  const esc = S.done.esc || univ.has('lo:esc'), egg = univ.has('eh:egg:loter'), r3 = univ.has('r3:feketelyuk'), eg = univ.has('eg:jart'), mo = univ.has('mo:jart');
-  if (!esc && !egg && !r3 && !eg && !mo) return '';
+  const esc = S.done.esc || univ.has('lo:esc'), egg = univ.has('eh:egg:loter'), r3 = univ.has('r3:feketelyuk'), eg = univ.has('eg:jart'), mo = univ.has('mo:jart'), me = univ.has('me:jart'), jt = univ.has('jt:jart'), tt = univ.has('tt:jart');
+  if (!esc && !egg && !r3 && !eg && !mo && !me && !jt && !tt) return '';
+  if (univ.has('jt:1957') && !S.univJt){ S.univJt = 1; S.prestige += 15; log('Egy lehallgatóállomás megfejtette az 1957-es furcsa jelet: a válasz a jövőből jött. +15 presztízs.'); }
   if (univ.has('eg:sziv') && !S.univEg){ S.univEg = 1; S.prestige += 20; log('Egy távoli torony tetején megrepedt egy Szív. A csillagvizsgálók furcsa fényt láttak: +20 presztízs.'); }
   if (univ.has('mo:csillag') && !S.univMo){ S.univMo = 1; S.money += 80; log('Csillagméhek repültek el a lőtér fölött, egy fekete lyuk felé. Az akácos méze exportra megy: +80 M.'); toast('Csillagméhek a lőtér fölött: +80 M'); }
   if (egg && !S.univBonus){ S.univBonus = 1; S.money += 100; log('Egy másik univerzumból kutatási támogatás érkezett: +100 M.'); toast('Jel egy másik univerzumból: +100 M'); }
@@ -1308,6 +1309,9 @@ function univCard(){
   if (egg) h += `<p class="dim" style="margin-top:10px">Egy másik univerzumban, egy fekete lyuk mögötti buborékban rád találtak. A kutatási támogatás (+100 M) megérkezett.</p>`;
   if (r3) h += `<p class="dim" style="margin-top:10px">Hír: egy raktár pohármosójában apró fekete lyukat találtak. Az Akadémia felfigyelt (+20 presztízs).</p>`;
   if (eg) h += `<p class="dim" style="margin-top:10px">Egy torony nő a felhők fölé, valaki lépcsőn akar feljutni az égbe.${S.univEg ? ' A tetején megrepedt egy Szív (+20 presztízs).' : ''} <a href="../Egtorony/" style="color:#b9a3ff">Égtorony ↗</a></p>`;
+  if (me) h += `<p class="dim" style="margin-top:10px">Valaki lefelé indult: fúrókapszulával a Föld közepe felé. <a href="../Melyseg/" style="color:#b9a3ff">Mélység ↗</a></p>`;
+  if (jt) h += `<p class="dim" style="margin-top:10px">Egy lehallgatóállomás a lőtér jeleit hallgatja.${S.univJt ? ' A furcsa jelet megfejtették: a jövőből jött (+15 presztízs).' : ''} <a href="../Jel-toro/" style="color:#b9a3ff">Jeltörő ↗</a></p>`;
+  if (tt) h += `<p class="dim" style="margin-top:10px">A visszaszámlálás is toldalékol: hátra-van-ból hátralevő. <a href="../Toldalektorony/" style="color:#b9a3ff">Toldaléktorony ↗</a></p>`;
   if (mo) h += `<p class="dim" style="margin-top:10px">A kilövőállás melletti akácosban kaptárak állnak.${S.univMo ? ' A csillagméhek egy fekete lyuk felé tartanak (+80 M).' : ''} <a href="../Mezorszag/" style="color:#b9a3ff">Mézország ↗</a></p>`;
   return h + `</section>`; }
 function flushToasts(){if(!TQ.length)return;const now=Date.now();if(TQ.some(q=>!q.u))TQ.some(q=>q.k==='bad')?SND.alarm():SND.ok();
