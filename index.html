@@ -102,6 +102,7 @@ textarea{font:400 11px var(--mono);resize:vertical;word-break:break-all}
 button.sec[aria-pressed=true]{border-color:var(--flame);color:var(--flame)}
 .dif{display:flex;flex-direction:column;gap:2px;text-align:left}.dif b{font:800 17px var(--disp);letter-spacing:.05em;text-transform:uppercase}
 .lock{opacity:.45}
+.rtab{width:100%;border-collapse:collapse;font:12px var(--mono);margin:6px 0}.rtab th,.rtab td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.rtab th{color:var(--dim);font-weight:600}.rtab tr.en td{color:var(--flame)}
 </style>
 </head>
 <body>
@@ -381,12 +382,12 @@ function check(x){const won=[];for(const m of MIS){if(!isOpen(m))continue;let ok
     else if(m.k==='kill')ok=hit&&w.y>0&&Math.abs(x.miss)<=effR(w.y);
     else if(m.k==='orbit')ok=r.out==='orbit'&&(!m.minM||w.m>=m.minM)&&(!m.minRp||r.rp>=m.minRp*1e3)&&(!m.wh||x.d.wh===m.wh);
     else if(m.k==='escape')ok=r.out==='escape'&&(!m.wh||x.d.wh===m.wh);}
-  if(ok){S.done[m.id]=1;if(UNIV_MIS.includes(m.id))univ.set('lo:'+m.id);S.money+=m.rw;S.income+=m.inc;S.prestige+=10;log('Feladat teljesítve: '+m.n+'.');won.push(m);if(!x.r&&!x.test)toast('Feladat teljesítve: '+m.n)}}
+  if(ok){S.done[m.id]=1;if(UNIV_MIS.includes(m.id))univ.set('lo:'+m.id);S.money+=m.rw;S.income+=m.inc;S.prestige+=10;log('Feladat teljesítve: '+m.n+'.');won.push(m);if(!x.r&&!x.test)toast('Feladat teljesítve: '+m.n);raceHook(m)}}
   return won}
 const gauss=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
 const qName=()=>`${1957+Math.floor(S.q/4)} · ${['I','II','III','IV'][S.q%4]}. negyedév`;
 const yTxt=y=>y>=1000?f1(y/1000)+' Mt':y>=1?f0(y)+' kt':f0(y*1e6)+' kg TNT';
-function save(){try{localStorage.setItem('loter1',JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem('loter1',JSON.stringify(S))}catch(e){}if(typeof raceSync==='function')raceSync()}
 function log(t){S.log.unshift(qName().slice(0,4)+': '+t);S.log.length=Math.min(S.log.length,8);histHook(t)}
 const matRate=()=>S.halt>0?0:0.4*Math.min(S.mc.ore,S.mc.proc,S.mc.qc)*(1+.5*(S.bld.cent||0))+(S.mc.proc>0?.15*(S.bld.ero||0):0);
 
@@ -408,7 +409,7 @@ function vProg(){
   const op=MIS.filter(isOpen),dn=Object.keys(S.done).length;
   let h=`<section class="card hero"><canvas id="hero"></canvas><div class="herot"><div class="eyebrow">${qName()}</div><div class="big">${f1(popTot())} M lakos</div><div class="prog"><i style="width:${Math.round(dn/MIS.length*100)}%"></i></div><div class="eyebrow">${dn} / ${MIS.length} feladat</div></div></section>`;
   if(S.over)h+=`<section class="card" style="border-color:var(--bad)"><div class="eyebrow">Vége</div><h2>Az ország összeomlott</h2><p>A népesség 8 millió alá esett, a program nem folytatható.</p><button class="act" data-a="reset">${resetArm?'Koppints újra az új játékhoz':'Új játék'}</button></section>`;
-  h+=crisisCard()+evCard()+tipCard()+newsCard()+univCard()+`<section class="card"><h2>Nyitott feladatok</h2>`;
+  h+=crisisCard()+evCard()+tipCard()+newsCard()+raceCard()+univCard()+`<section class="card"><h2>Nyitott feladatok</h2>`;
   h+=op.length?op.map(m=>`<div class="tech"><div class="row"><h3>${m.n}</h3><span class="pill go">+${m.rw} M${m.inc?`, bevétel +${m.inc}`:''}</span></div><p class="dim">${m.d}</p></div>`).join(''):`<p>Minden feladat kész. A lőtér nyitva marad: kísérletezz tovább szabadon.</p>`;
   h+=`</section><section class="card"><h2>Negyedév</h2>`;
   h+=S.research?`<p>Kutatás: <b>${TECH[S.research.id].n}</b>, még ${S.research.left} negyedév.</p>`:`<p class="dim">Nincs futó kutatás. A kutatás és az építkezés csak a negyedév lezárásával halad.</p>`;
@@ -732,7 +733,7 @@ function launch(){
   [...new Set(B.stages.map(s=>s.id))].forEach(id=>S.rel[id]=Math.min(.98,S.rel[id]+(r.out==='fail'?.05:.03)*(S.bld.kovet?2:1)));
   let miss=null,scat=0;
   if(r.out==='impact'){scat=gauss()*r.range*cepFrac();if(d.target)miss=(r.range+scat)/1000-d.target}
-  const won=check({r,miss,d});flightStat(r,miss);
+  const won=check({r,miss,d});flightStat(r,miss);raceLaunch(r,d,won);
   const rows=[['Csúcsmagasság',f0(r.apo/1000)+' km'],['Legnagyobb sebesség',f0(r.vmax)+' m/s'],['Repülési idő',f0(r.tof)+' s'],['Max. dinamikus nyomás',f0(r.maxQ/1000)+' kPa']];
   if(r.vRe)rows.push(['Visszatérési sebesség',f0(r.vRe)+' m/s'],['Csúcs-hőáram',f1(r.maxHeat/1e6)+' MW/m²']);
   const txt={nolift:'A rakéta nem emelkedett el: a tolóerő kisebb a súlynál.',
@@ -816,7 +817,7 @@ document.addEventListener('click',e=>{
   else if(a==='test')return test(k);
   else if(a==='skip')return finish();
   else if(a==='close'){$('fly').hidden=true;PB=null;SND.stop()}
-  else if(a==='reset'){if(resetArm){resetArm=false;OV={v:'new',diff:S.diff||'n',has:1}}else resetArm=true}
+  else if(a==='reset'){if(resetArm){resetArm=false;OV=S.race?{v:'race'}:{v:'new',diff:S.diff||'n',has:1}}else resetArm=true}
   save();render();
 });
 document.addEventListener('input',e=>{
@@ -1453,12 +1454,14 @@ function renderOv(){const el=$('ov');el.hidden=!OV;if(!OV){el.innerHTML='';retur
     h=`<div class="ttlwrap"><canvas id="tcv"></canvas><div class="ttl">Kísérleti <b>Lőtér</b></div><p class="dim">Rakétaprogram a hidegháború éveiből. Tervezz, indíts, tarts egyensúlyt, és döntsd el, mire való mindez.</p></div>
       ${OV.has?`<button class="act" data-a="ovclose">Folytatás${S.name?' · '+esc(S.name):''} · ${qName()}</button>`:''}
       <button class="${OV.has?'sec':'act'}" data-a="newopen">Új játék</button>
+      <button class="sec" data-a="raceopen">🚀 Űrverseny – több játékos</button>
       <p class="dim">A hangot a Menü Beállítások lapján kapcsolhatod ki. A játék minden lépés után ment ebben a böngészőben.</p>`}
   else if(OV.v==='new'){
     h=`<h2>Új program</h2><label for="pname">A program neve</label><input type="text" id="pname" maxlength="24" placeholder="például Hajnalcsillag" value="${esc(OV.name||'')}">
       <div class="eyebrow">Nehézség</div>${Object.entries(DIFF).map(([k,D])=>`<button class="sec dif" data-a="diff" data-k="${k}" aria-pressed="${OV.diff===k}"><b>${D.n}</b><span class="dim">${D.d}</span></button>`).join('')}
       ${OV.has?'<p><span class="pill bad">Figyelem</span> Az új program felülírja a mostani mentést.</p>':''}
       <button class="act" data-a="newgo">Program indítása</button><button class="sec" data-a="${OV.back?'title':'ovclose'}">Vissza</button>`}
+  else if(OV.v==='race')h=raceOv();
   else if(OV.v==='end'){const E=ENDS[OV.k],p=score();
     h=`<div class="eyebrow">Mérföldkő · ${qName()}</div><div class="ttl sm">${E[0]}</div><p>${E[1]}</p>
       <section class="card"><div class="row"><h2>${f0(p)} pont</h2><span class="pill go">${rank(p)}</span></div>${statGrid()}<p class="dim">Nehézség: ${(DIFF[S.diff]||DIFF.n).n}. A pontszám tovább gyűjthető.</p></section>
@@ -1483,6 +1486,7 @@ function extClick(a,k){
   else if(a==='ovtab'){OV.tab=k;OV.msg=''}
   else if(a==='ovclose')OV=null;
   else if(a==='title')OV={v:'title',has:1};
+  else if(a==='newopen'&&S.race){OV={v:'race'};raceKapcsol()}
   else if(a==='newopen')OV={v:'new',diff:S.diff||'n',back:1,has:OV&&OV.has};
   else if(a==='diff'){OV.name=$('pname').value;OV.diff=k}
   else if(a==='newgo'){newGame(OV.diff,($('pname').value||'').trim().slice(0,24));OV=null;save();render();return true}
@@ -1490,6 +1494,10 @@ function extClick(a,k){
   else if(a==='tips'){S.opt.tips=S.opt.tips===0?1:0;save();render();return true}
   else if(a==='expc'){OV.code=encSave();OV.msg='A kód elkészült. Másold ki, és őrizd meg.'}
   else if(a==='copyc'){const el=$('code');OV.code=el.value;try{navigator.clipboard.writeText(el.value).then(()=>{if(OV){OV.msg='A kód a vágólapon van.';renderOv()}},()=>{})}catch(e){}OV.msg='Ha a másolás nem sikerült, jelöld ki a mezőt, és másold kézzel.'}
+  else if(a==='raceopen'){OV={v:'race'};raceKapcsol()}
+  else if(a==='racebe'){raceBe();return true}
+  else if(a==='raceki'){raceKi();return true}
+  else if(a==='impc'&&S.race){OV.msg='<span class="pill bad">Verseny</span> A futam alatt nem lehet mentést betölteni.'}
   else if(a==='impc'){try{const o=JSON.parse(decodeURIComponent(escape(atob($('code').value.trim()))));if(!o||!o.design||!o.rel||o.q==null)throw 0;OV=null;start(o);save();toast('Mentés betöltve')}catch(e){if(OV)OV.msg='<span class="pill bad">Hiba</span> A kód nem olvasható.'}render();return true}
   else if(a==='evc'){evChoose(+k);save();render();return true}
   else if(a==='bpsave'){if(S.bp.length<8){S.bp.push({n:($('bpn').value||'').trim().slice(0,18)||'Terv '+(S.bp.length+1),d:clone(S.design)});achCheck()}save();render();return true}
@@ -1500,6 +1508,104 @@ function extClick(a,k){
 function renderExt(){renderOv();if($('fly').hidden){if(!OV)checkEnds();flushToasts()}}
 function extStart(hot,had){const f=fresh();S.st={...f.st,...S.st};S.opt={...f.opt,...S.opt};LC=0;achCheck(true);for(const k in ENDS)if(had&&!S.ends[k]&&ENDS[k][2]())S.ends[k]=S.q+1;if(!hot)OV={v:'title',has:had}}
 
+/* ---------- Űrverseny (több játékos) ----------
+   Heti futam: aki beszáll, új programot kezd (Főkonstruktőr nehézség), és a mérföldkövekért verseng a többiekkel.
+   A saját játék közben félre van téve, kilépéskor visszakapod. Az adatok egy nyilvános MQTT üzenetközvetítőn mennek át
+   (HiveMQ, mint a Raktár 3D-ben); a gépek közvetlenül nem beszélnek egymással, saját szerver nincs.
+   Témák (RACE.cs/...):
+     f/<hét>/<azonosító>  – megőrzött (retained) versenylap: {id, nev, q, m:{mérföldkő:[negyedév, időbélyeg]}, l, ok, ts}
+     jelen/<azonosító>    – megőrzött jelenlét: {nev, het}; a kapcsolat megszakadásakor a szerver törli (will)
+     e                    – élő hírek: {t:'start', id, nev, q, wh, out, won:[...]}
+   Rangsor: több mérföldkő előrébb; azonos számnál aki kevesebb negyedév alatt érte el az utolsót. Az „elsőség”
+   (az a játékos, aki a héten valós időben elsőként ér el egy mérföldkövet) presztízst és pénzt hoz. */
+const RACE={broker:'wss://broker.hivemq.com:8884/mqtt',cs:'loter-urverseny-k7q4z2'};
+const RM_IDS=['alt','orbit','crew','esc','station','moon'];
+const RM_IKON={alt:'⬆',orbit:'🛰',crew:'👨‍🚀',esc:'🌒',station:'🏗',moon:'🌕'};
+const RM_ELSO={alt:[10,40],orbit:[30,150],crew:[30,150],esc:[25,120],station:[30,150],moon:[50,250]}; // [presztízs, M]
+function hetKulcs(d=new Date()){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);
+  const e=t.getUTCFullYear();return `${e}-W${String(Math.ceil(((t-Date.UTC(e,0,1))/864e5+1)/7)).padStart(2,'0')}`}
+const raceId=(()=>{let i;try{i=localStorage.getItem('loter-id')}catch(e){}if(!i){i=Math.random().toString(36).slice(2,10);try{localStorage.setItem('loter-id',i)}catch(e){}}return i})();
+const NET={k:null,be:false,het:null,lap:{},jelen:{},hirek:[],uzenet:'',kuld:'',toltes:false};
+const raceHet=()=>S.race?S.race.het:hetKulcs();
+function raceLap(){return{id:raceId,nev:S.name||'Névtelen program',q:S.q,m:S.race.m,l:S.launches,ok:S.st.ok||0,ts:Date.now()}}
+// rangsor: [{...lap, en}] – a saját lapunk mindig a legfrissebb helyi állapotból
+function raceRang(){const L={...NET.lap};if(S.race&&S.race.het===NET.het)L[raceId]=raceLap();
+  const pont=x=>{const ms=Object.values(x.m||{});return[ms.length,ms.length?Math.max(...ms.map(v=>v[0])):x.q,ms.length?Math.max(...ms.map(v=>v[1])):x.ts]};
+  return Object.values(L).filter(x=>x&&x.id).map(x=>({...x,en:x.id===raceId,p:pont(x)})).sort((a,b)=>b.p[0]-a.p[0]||a.p[1]-b.p[1]||a.p[2]-b.p[2])}
+async function raceKapcsol(){
+  if(NET.k||NET.toltes)return;NET.toltes=true;NET.het=raceHet();NET.uzenet='Kapcsolódás…';raceFrissit();
+  let mqtt;try{const mod=await import('./vendor/mqtt/mqtt.esm.js');mqtt=mod.default?.connect?mod.default:mod.default?.default??mod}
+  catch(e){NET.toltes=false;NET.uzenet='Nem sikerült betölteni a hálózati könyvtárat.';raceFrissit();return}
+  const jt=`${RACE.cs}/jelen/${raceId}`;
+  NET.k=mqtt.connect(RACE.broker,{clientId:`loter_${raceId}_${Math.random().toString(36).slice(2,6)}`,clean:true,keepalive:30,reconnectPeriod:5000,connectTimeout:10000,
+    will:{topic:jt,payload:'',qos:0,retain:true}});NET.toltes=false;
+  NET.k.on('connect',()=>{NET.be=true;NET.uzenet='';NET.het=raceHet();
+    NET.k.subscribe(`${RACE.cs}/f/${NET.het}/+`);NET.k.subscribe(`${RACE.cs}/jelen/+`);NET.k.subscribe(`${RACE.cs}/e`);
+    NET.k.publish(jt,JSON.stringify({nev:S.name||'Névtelen program',het:NET.het,v:S.race?1:0}),{qos:0,retain:true});NET.kuld='';raceSync();raceFrissit()});
+  NET.k.on('close',()=>{if(NET.be){NET.be=false;NET.uzenet='A kapcsolat megszakadt, újrapróbálom…';raceFrissit()}});
+  NET.k.on('error',e=>console.warn('[űrverseny]',e?.message||e));
+  NET.k.on('message',(tema,adat)=>{const s=adat.toString(),r=tema.slice(RACE.cs.length+1).split('/');let o=null;try{o=s?JSON.parse(s):null}catch(e){return}
+    if(r[0]==='f'&&r[1]===NET.het){if(r[2]===raceId)return;if(o&&o.id===r[2])NET.lap[r[2]]=raceTiszta(o);else delete NET.lap[r[2]];raceFrissit()}
+    else if(r[0]==='jelen'){if(r[1]===raceId)return;if(o)NET.jelen[r[1]]={nev:String(o.nev||'?').slice(0,24),v:!!o.v};else delete NET.jelen[r[1]];raceFrissit()}
+    else if(r[0]==='e'&&o&&o.id!==raceId)raceHir(o)})}
+function raceTiszta(o){const m={};for(const k of RM_IDS)if(Array.isArray(o.m?.[k])&&o.m[k].every(Number.isFinite))m[k]=[o.m[k][0],o.m[k][1]];
+  return{id:String(o.id),nev:String(o.nev||'?').slice(0,24),q:+o.q||0,m,l:+o.l||0,ok:+o.ok||0,ts:+o.ts||0}}
+// a saját versenylap küldése, ha változott (minden mentéskor megnézzük)
+function raceSync(){if(!S.race||!NET.be||S.race.het!==NET.het)return;const l=raceLap(),k=JSON.stringify({...l,ts:0});if(k===NET.kuld)return;NET.kuld=k;
+  NET.k.publish(`${RACE.cs}/f/${S.race.het}/${raceId}`,JSON.stringify(l),{qos:0,retain:true})}
+const yQ=q=>1957+Math.floor(q/4);
+const misNev=id=>(MIS.find(m=>m.id===id)||{}).n||id;
+// mérföldkő a versenyben (a check() hívja)
+function raceHook(m){if(!S.race||!RM_IDS.includes(m.id)||S.race.m[m.id])return;const t=Date.now();S.race.m[m.id]=[S.q,t];
+  const elotte=Object.values(NET.lap).filter(x=>x.m&&x.m[m.id]&&x.m[m.id][1]<t).length;
+  if(elotte===0){const[p,M]=RM_ELSO[m.id];S.prestige+=p;S.money+=M;S.race.elso=(S.race.elso||0)+1;
+    log(`Űrverseny: elsőként a világon – ${misNev(m.id)}! +${p} presztízs, +${M} M.`);mile(`Űrverseny: elsőként – ${misNev(m.id)}`);toast(`${RM_IKON[m.id]} Elsőként a világon: ${misNev(m.id)}!`,'ach')}
+  else if(elotte===1){S.prestige+=10;log(`Űrverseny: másodikként – ${misNev(m.id)}. +10 presztízs.`);toast(`${RM_IKON[m.id]} Másodikként: ${misNev(m.id)}`,'ok')}
+  else log(`Űrverseny: ${elotte+1}. helyen – ${misNev(m.id)}.`)}
+// indítás után: hír a többieknek
+function raceLaunch(r,d,won){if(!S.race||!NET.be)return;
+  NET.k.publish(`${RACE.cs}/e`,JSON.stringify({t:'start',id:raceId,nev:S.name||'Névtelen program',q:S.q,wh:d.wh,out:r.out,won:won.map(m=>m.id).filter(i=>RM_IDS.includes(i))}),{qos:0})}
+const RH_OUT={nolift:'a starthelyen maradt',fail:'meghibásodott',crash:'lezuhant',burnup:'elégett a légkörben',orbit:'pályára állt',escape:'szökési pályára állt',impact:'becsapódott a célterületen'};
+function raceHir(o){if(o.t!=='start'||!S.race)return;const nev=String(o.nev||'Valaki').slice(0,24),won=(Array.isArray(o.won)?o.won:[]).filter(i=>RM_IDS.includes(i));
+  let t;if(won.length){t=`${esc(nev)}: ${won.map(misNev).join(', ')}!`;toast(`${RM_IKON[won[0]]} ${nev} – ${won.map(misNev).join(', ')}`,'ach');log(`Űrverseny: a(z) ${nev} program teljesítette: ${won.map(misNev).join(', ')}.`)}
+  else{t=`${esc(nev)} rakétája ${RH_OUT[o.out]||'repült'}.`;if(['fail','crash','nolift','burnup'].includes(o.out))log(`Űrverseny: a(z) ${nev} rakétája ${RH_OUT[o.out]}.`)}
+  NET.hirek.unshift({t,ido:Date.now()});NET.hirek.length=Math.min(NET.hirek.length,6);save();raceFrissit();if($('fly').hidden&&!OV)flushToasts()}
+// a kártya és a nézet frissítése teljes újrarajzolás nélkül (hogy a beviteli mezők ne vesszenek el)
+function raceFrissit(){const el=$('raceCard');if(el)el.outerHTML=raceCard();if(OV&&OV.v==='race')renderOv()}
+function raceTabla(max=8){const R=raceRang();if(!R.length)return'<p class="dim">Ezen a héten még senki sem versenyzett. Légy te az első!</p>';
+  return`<table class="rtab"><tr><th>#</th><th>Program</th><th>Év</th><th>Mérföldkövek</th></tr>${R.slice(0,max).map((x,i)=>`<tr class="${x.en?'en':''}"><td>${i+1}</td><td>${esc(x.nev)}${x.en?' (te)':''}${NET.jelen[x.id]&&!x.en?' <span class="pill ok">fent</span>':''}</td><td>${yQ(x.q)}</td><td>${RM_IDS.filter(k=>x.m[k]).map(k=>`<span title="${misNev(k)} · ${yQ(x.m[k][0])}">${RM_IKON[k]}${yQ(x.m[k][0])%100}</span>`).join(' ')||'–'}</td></tr>`).join('')}</table>`}
+function raceCard(){
+  const fent=Object.values(NET.jelen).length;
+  if(!S.race)return`<section class="card" id="raceCard" style="border-color:var(--trace)"><div class="eyebrow" style="color:var(--trace)">Űrverseny · több játékos</div><h2>Ki ér elsőként a Holdra?</h2><p class="dim">Heti futam más játékosok ellen: új program indul, és aki elsőként állít műholdat pályára, juttat embert az űrbe vagy ér a Holdra, presztízst és pénzt kap. A mostani játékod félreteszed, kilépéskor visszakapod.</p><button class="act" data-a="raceopen">Űrverseny ↗</button></section>`;
+  const R=raceRang(),hely=R.findIndex(x=>x.en)+1;
+  return`<section class="card" id="raceCard" style="border-color:var(--trace)"><div class="row"><div class="eyebrow" style="color:var(--trace)">Űrverseny · ${S.race.het}</div><span class="pill ${NET.be?'ok':''}">${NET.be?`${fent+1} fent`:'nincs kapcsolat'}</span></div>
+    <h2>${hely?`${hely}. hely / ${R.length}`:'Futam'}</h2>${NET.uzenet?`<p class="dim">${NET.uzenet}</p>`:''}${raceTabla(5)}
+    ${NET.hirek.length?`<div class="log">${NET.hirek.slice(0,4).map(h=>`<div>${h.t}</div>`).join('')}</div>`:''}
+    <div class="fine"><button class="sec" data-a="raceopen">Teljes állás</button></div></section>`}
+function raceOv(){const most=hetKulcs(),r=S.race;let tarolt=null;try{tarolt=JSON.parse(localStorage.getItem('loter1-verseny'))}catch(e){}
+  const folyt=!r&&tarolt&&tarolt.race&&tarolt.race.het===most&&!tarolt.over;
+  let h=`<div class="row"><h2>Űrverseny</h2><button class="sec" data-a="ovclose">Bezárás</button></div>
+    <p class="dim">Heti futam: hétfőn új kezdődik. Mindenki Főkonstruktőr nehézségen, 1957-től indul. A rangsor a mérföldkövek száma, azonos számnál az, aki kevesebb negyedév alatt érte el az utolsót. Aki a héten valós időben elsőként ér el egy mérföldkövet, presztízst és pénzt kap; a többiek indításairól hírek jönnek.</p>
+    <section class="card"><div class="row"><h3>${r?r.het:most} · állás</h3><span class="pill ${NET.be?'ok':''}">${NET.be?`${Object.keys(NET.jelen).length+(r?1:0)} fent`:NET.uzenet||'kapcsolódás…'}</span></div>${raceTabla(20)}</section>`;
+  if(r){h+=r.het!==most?`<p><span class="pill bad">Lezárult</span> Ez a futam véget ért; az új hét futamához lépj ki, és szállj be újra.</p>`:'';
+    h+=`<button class="sec" data-a="raceki">Vissza a saját programomhoz</button><p class="dim">A versenyjátékod megmarad: a héten bármikor folytathatod.</p>`}
+  else h+=`<label for="rname">A versenyprogram neve</label><input type="text" id="rname" maxlength="24" placeholder="például Hajnalcsillag" value="${esc(OV.name??(folyt?tarolt.name:S.name)??'')}">
+    <button class="act" data-a="racebe">${folyt?'Versenyjáték folytatása':'Beszállok a futamba'}</button><p class="dim">A mostani játékod félrekerül, kilépéskor pontosan ott folytatod, ahol abbahagytad. A versenyben a mentéskód betöltése nem működik.</p>`;
+  h+=`<p class="dim kicsi">A program neve és a versenyállásod egy nyilvános, ingyenes üzenetközvetítőn (HiveMQ) megy át a többi játékoshoz; más adat nem.</p>`;
+  return h}
+function raceBe(){const nev=(($('rname')||{}).value||'').trim().slice(0,24),most=hetKulcs();
+  try{localStorage.setItem('loter1-sajat',JSON.stringify(S))}catch(e){}
+  let t=null;try{t=JSON.parse(localStorage.getItem('loter1-verseny'))}catch(e){}
+  if(t&&t.race&&t.race.het===most&&!t.over){start(t);if(nev)S.name=nev}
+  else{newGame('n',nev);S.race={het:most,m:{},t0:Date.now()};S.log.unshift('Űrverseny: beszálltál a heti futamba. Az első, aki pályára állít egy műholdat, elsőségi jutalmat kap.')}
+  OV=null;S.tab='prog';NET.kuld='';
+  if(NET.k){NET.k.end(true);NET.k=null;NET.be=false;NET.lap={};NET.jelen={}}raceKapcsol();save();render()}
+function raceKi(){try{localStorage.setItem('loter1-verseny',JSON.stringify(S))}catch(e){}
+  let s=null;try{s=JSON.parse(localStorage.getItem('loter1-sajat'))}catch(e){}
+  if(NET.k)NET.k.publish(`${RACE.cs}/jelen/${raceId}`,JSON.stringify({nev:S.name||'?',het:NET.het,v:0}),{qos:0,retain:true});
+  if(s&&s.design&&s.rel){start(s);try{localStorage.removeItem('loter1-sajat')}catch(e){}}else{newGame(S.diff||'n',S.name||'');delete S.race}
+  OV=null;save();render()}
+
 /* ---------- Indulás ---------- */
 function start(snap){
   let s=snap&&snap.q!=null?snap:null;
@@ -1507,7 +1613,7 @@ function start(snap){
   if(s&&s.design&&s.rel){S=Object.assign(fresh(),s,{rel:{...fresh().rel,...s.rel}});S.riv=S.riv.map(r=>({...fresh().riv.find(x=>x.id===r.id),...r}));
   if(!s.v5){S.v5=1;const y0={N:20,K:50,D:15};for(const R of S.riv){const q=Math.max(0,R.t-R.t0);R.ars=Math.min(R.ars,R.cap,R.gr*q);R.y=Math.min(R.y,y0[R.id]*Math.pow(1.05,q));R.def=Math.min(R.def,.005*q)}}
   if(!s.done){S.done={};['alt','z300','z1500','test','k1500','z5000','k9000','orbit'].slice(0,s.mission||0).forEach(i=>S.done[i]=1)}}
-  extStart(!!(snap&&snap.q!=null),!!(s&&s.design&&s.rel));render();
+  extStart(!!(snap&&snap.q!=null),!!(s&&s.design&&s.rel));render();if(S.race)raceKapcsol();
 }
 window.claude?.hot?.snapshot?.(()=>S);
 window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
