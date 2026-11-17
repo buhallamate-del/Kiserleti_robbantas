@@ -613,24 +613,30 @@ function rivStrike(R,k,pre,shotsIn){
   R.tens=100;S.nukedBy[R.id]=1;if(!shotsIn&&!(R.emb>0)){R.emb=24;log(R.n+' atomfegyvert vetett be: a világ embargót hirdetett ellene.')}
   const txt=`${pre||''}${R.n} ${n} rakétát indított. Elfogva ${sum.int}, becsapódott ${sum.hit}.${sum.pop?` A városok vesztesége ${f2(sum.pop)} millió fő.`:''}${sum.mis?` Megsemmisült ${sum.mis} rakétád.`:''}${sum.b?` Megrongálódott: ${sum.b}.`:''}`;
   log(`${R.n} csapást mért: ${sum.hit} találat.`);
-  if(!shotsIn)play({ex:shots,blast:sum.hit?{y:R.y,nuc:1,fus:R.y>=500,lead:.3,dur:11,city:1}:null,title:sum.hit?'Csapás érte az országot':'A védelem megfogta a támadást',txt,rows:[],won:[]});
+  if(!shotsIn)play({ex:shots,blast:sum.hit?{y:R.y,nuc:1,fus:R.y>=500,lead:.3,dur:13,city:1,cs:'home',cn:'Hazád'}:null,title:sum.hit?'Csapás érte az országot':'A védelem megfogta a támadást',txt,rows:[],won:[]});
   return{sum,txt};
 }
+const RCITY={N:[['Havasvár','cap'],['Ércbánya','ind'],['Jégkikötő','port']],K:[['Keletvár','cap'],['Acélmező','ind'],['Folyótorok','port']],D:[['Délvár','cap'],['Napfény-öböl','port'],['Sóvidék','ind']]};
+const KN={cap:'főváros',ind:'iparváros',port:'kikötőváros'};
+const rCities=R=>R.cities||(R.cities=RCITY[R.id].map(([n,k])=>({n,k,hit:0})));
+const tgSel=R=>{const v=(S.tgt||{})[R.id];return v==null?'0':String(v)};
+const tgCity=(R,m)=>m==='mil'||m==null?null:rCities(R)[+m]||null;
 function strike(R,mode,N){
+  const ct=tgCity(R,mode);
   const pool=reach(R).filter(a=>a.y>=1).sort((a,b)=>b.y-a.y),shots=[],first=!S.nukedBy[R.id],r0=R.ars;let fl=0,int=0,hit=0,kill=0,popL=0,yMax=0,sent=0;
   for(const a of pool)while(a.cnt>0&&sent<N){a.cnt--;sent++;const t0=.2*sent;
     if(Math.random()>aRel(a)){fl++;shots.push({f:HOME,to:[R.mx,R.my],res:'fail',t0});continue}
     for(let w=0;w<(S.tech.mirv?2:1);w++){
       if(Math.random()<R.def){int++;if(!w)shots.push({f:HOME,to:[R.mx,R.my],res:'int',t0});continue}
       hit++;yMax=Math.max(yMax,a.y);if(!w)shots.push({f:HOME,to:[R.mx+(Math.random()-.5)*.06,R.my+(Math.random()-.5)*.06],res:'hit',t0});
-      const sc=Math.cbrt(a.y/100),l=Math.min(R.pop*.15,.35*sc*sc)*(mode==='mil'?.15:1);R.pop-=l;popL+=l;
+      const sc=Math.cbrt(a.y/100),l=Math.min(R.pop*.15,.35*sc*sc)*(mode==='mil'?.15:ct&&ct.k==='cap'?1.4:1);R.pop-=l;popL+=l;
       if(mode==='mil'){const q=effR(a.y)*.35/Math.max(.05,a.cep*R.dist),pk=1-Math.pow(.5,q*q);if(Math.random()<pk){const k=Math.min(R.ars,a.y>=1000?3:2);R.ars-=k;kill+=k}}
-      else R.eco=Math.max(.1,R.eco-.05*sc)
+      else{R.eco=Math.max(.1,R.eco-.05*sc*(ct&&ct.k==='ind'?1.6:1));if(ct&&ct.k==='port')R.conv*=.88}
     }}
-  if(!sent)return;S.st.nukes+=sent;
+  if(!sent)return;S.st.nukes+=sent;if(ct&&hit)ct.hit++;
   if(first){S.prestige-=30;S.emb=24;S.al.forEach(a=>{a.rel-=25;if(a.ally&&a.rel<40){a.ally=0;log(a.n+' felmondta a szövetséget.')}});S.riv.forEach(o=>{if(o!==R&&!o.dead){o.tens=clamp(o.tens+25,0,100);o.treaty=0}})}else S.prestige-=5;
   R.treaty=0;R.tens=100;if(!R.war){R.war=1;R.front=0}
-  let txt=`${sent} rakéta indult ${R.n} ${mode==='mil'?'katonai célpontjai':'ipari körzetei'} ellen. Meghibásodott ${fl}, elfogott töltet ${int}, célba ért ${hit}.`;
+  let txt=`${sent} rakéta indult ${ct?`${R.n} ${KN[ct.k]}a, ${ct.n}`:R.n+' '+(mode==='mil'?'katonai célpontjai':'ipari körzetei')} ellen. Meghibásodott ${fl}, elfogott töltet ${int}, célba ért ${hit}.`;
   txt+=mode==='mil'?` Megsemmisült ${f0(kill)} rakétája a mintegy ${f0(r0)}-ból. Járulékos embervesztesége ${f2(popL)} millió fő, népessége ${f1(R.pop)} millió.`:` Gazdasága ${Math.round(R.eco*100)}%-on áll, embervesztesége ${f2(popL)} millió fő, népessége ${f1(R.pop)} millió.`;
   txt+=first?' Elsőként vetettél be atomfegyvert: −30 presztízs, 24 negyedévre kizártak a világkereskedelemből, a szerződéseid felbomlottak. Szövetségesed az marad, akivel a viszony 40 fölött maradt.':' Válaszcsapásként a világ tudomásul veszi: −5 presztízs, embargó nincs.';
   let ret=null;
@@ -638,7 +644,7 @@ function strike(R,mode,N){
   else if(R.ars>=1){ret=rivStrike(R,Math.ceil(R.ars*R.aggr)+2,'',shots);if(ret)txt+=' Válaszcsapás: '+ret.txt}
   log(`Csapás ${R.n} ellen: ${hit} találat.`);
   const by=hit?yMax:ret&&ret.sum.hit?R.y:0;
-  play({ex:shots,blast:by?{y:by,nuc:by>=1,fus:by>=500,lead:.3,dur:11,city:1}:null,title:'Csapás és válasz',txt,rows:[],won:check({})});
+  const own=!hit;play({ex:shots,blast:by?{y:by,nuc:by>=1,fus:by>=500,lead:.3,dur:13,city:1,cs:own?'home':ct?ct.k:'base',cn:own?'Hazád':ct?ct.n:R.n+', rakétabázis'}:null,title:'Csapás és válasz',txt,rows:[],won:check({})});
 }
 const allySup=()=>S.al.filter(a=>a.ally).reduce((t,a)=>t+a.conv*.6,0);
 function convPow(R){const army=R.dist>3000?Math.min(S.mil.army,2+3*S.mil.navy):S.mil.army;return(army*(S.tech.mot?1.3:1)+S.mil.air*1.6+S.mil.navy*1.2)*(S.tech.ew?1.2:1)+allySup()}
@@ -662,7 +668,7 @@ function peace(R){
   else log(R.n+' elutasította a békeajánlatot, mert nyerésre áll.');
 }
 function cstrike(R,N){
-  const pool=reach(R).filter(a=>a.y<1),shots=[];let sent=0,hit=0,fl=0,int=0,yMax=0;
+  const ct=tgCity(R,tgSel(R)),pool=reach(R).filter(a=>a.y<1),shots=[];let sent=0,hit=0,fl=0,int=0,yMax=0;
   for(const a of pool)while(a.cnt>0&&sent<N){a.cnt--;sent++;const t0=.2*sent;
     if(Math.random()>aRel(a)){fl++;shots.push({f:HOME,to:[R.mx,R.my],res:'fail',t0});continue}
     if(Math.random()<R.def*.5){int++;shots.push({f:HOME,to:[R.mx,R.my],res:'int',t0});continue}
@@ -670,7 +676,7 @@ function cstrike(R,N){
   if(!sent)return;
   const dmg=hit*(S.tech.pgm?.6:.15);R.conv=Math.max(0,R.conv-dmg);R.front=clamp(R.front+hit*(S.tech.pgm?1.5:.5),-100,100);
   log(`Hagyományos rakétacsapás ${R.n} ellen: ${hit} találat.`);
-  play({ex:shots,blast:hit?{y:yMax,lead:.3,dur:5,city:1}:null,title:'Hagyományos rakétacsapás',txt:`${sent} rakéta indult. Meghibásodott ${fl}, elfogva ${int}, célba ért ${hit}. A rivális hagyományos ereje ${f1(dmg)} egységgel csökkent.${S.tech.pgm?'':' Precíziós robbanófej nélkül a hatás kicsi.'}`,rows:[],won:[]});
+  play({ex:shots,blast:hit?{y:yMax,lead:.3,dur:5,city:1,cs:ct?ct.k:'base',cn:ct?ct.n:R.n+', katonai körzet'}:null,title:'Hagyományos rakétacsapás',txt:`${sent} rakéta indult. Meghibásodott ${fl}, elfogva ${int}, célba ért ${hit}. A rivális hagyományos ereje ${f1(dmg)} egységgel csökkent.${S.tech.pgm?'':' Precíziós robbanófej nélkül a hatás kicsi.'}`,rows:[],won:[]});
 }
 function vVilag(){
   let h=crisisCard()+`<section class="card"><h2>Világ</h2><canvas id="wmap"></canvas><p class="dim">A gyűrű a feszültséget mutatja, a szaggatott vonal zöld, ha van odáig érő rakétád.</p></section>`;
@@ -694,8 +700,9 @@ function vVilag(){
       <div class="fine"><button class="sec" data-a="peace" data-k="${R.id}">Békeajánlat</button><button class="sec" data-a="cstrike" data-k="${R.id}" ${cc?'':'disabled'}>Hagyományos rakétacsapás</button></div>`
       :`<button class="sec" data-a="war" data-k="${R.id}:war">${S.arm===R.id+':war'?'Biztos? Koppints újra a hadüzenethez':'Hadüzenet'}</button>`}
       <div class="fine"><button class="sec" data-a="sn">Csapás mérete: ${sn>5?'mind':sn}</button></div>
-      <div class="fine"><button class="sec" data-a="strike" data-k="${R.id}:mil" ${rn?'':'disabled'}>${S.arm===R.id+':mil'?'Biztos? Válaszcsapás várható':'Atomcsapás katonai célokra'}</button><button class="sec" data-a="strike" data-k="${R.id}:ind" ${rn?'':'disabled'}>${S.arm===R.id+':ind'?'Biztos? Válaszcsapás várható':'Atomcsapás ipari körzetekre'}</button></div>
-      <p class="dim">Az ipari körzetekre mért csapás a népességet és a gazdaságot pusztítja, a katonai célokra mért a rakétákat, kisebb járulékos emberveszteséggel. Aki elsőként vet be atomfegyvert, azt 24 negyedévre kizárják a világkereskedelemből. A válaszcsapásért nem jár embargó.</p>`;
+      <select data-s="tgt" data-k="${R.id}" aria-label="Célpont"><option value="mil" ${tgSel(R)==='mil'?'selected':''}>Célpont: katonai célok, rakétabázisok</option>${rCities(R).map((c2,i)=>`<option value="${i}" ${tgSel(R)===String(i)?'selected':''}>Célpont: ${c2.n} (${KN[c2.k]})${c2.hit?` · ${c2.hit} csapás érte`:''}</option>`).join('')}</select>
+      <div class="fine"><button class="sec" data-a="strike" data-k="${R.id}:${tgSel(R)}" ${rn?'':'disabled'}>${S.arm===R.id+':'+tgSel(R)?'Biztos? Válaszcsapás várható':'Atomcsapás a célpontra'}</button></div>
+      <p class="dim">A katonai célokra mért csapás a rakétáit pusztítja, kisebb járulékos emberveszteséggel. Városra mért csapásnál a főváros a népességet, az iparváros a gazdaságot, a kikötőváros a hagyományos haderejét sújtja leginkább. A hagyományos rakétacsapás is a kiválasztott célpontra megy. Aki elsőként vet be atomfegyvert, azt 24 negyedévre kizárják a világkereskedelemből. A válaszcsapásért nem jár embargó.</p>`;
     }
     h+=`</section>`;
   }
@@ -822,7 +829,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const el=e.target,s=el.dataset.s,d=S.design;
-  if(s==='eng')d.stages[el.dataset.k].eng=el.value;else if(s==='wh')d.wh=el.value;else if(s==='target')d.target=+el.value;else if(s==='goal')d.goal=el.value;else if(s==='ign')d.ign=el.value;
+  if(s==='eng')d.stages[el.dataset.k].eng=el.value;else if(s==='wh')d.wh=el.value;else if(s==='target')d.target=+el.value;else if(s==='goal')d.goal=el.value;else if(s==='tgt'){S.tgt=S.tgt||{};S.tgt[el.dataset.k]=el.value;S.arm=''}else if(s==='ign')d.ign=el.value;
   save();if(s||el.dataset.i==='convMass')render();
 });
 
@@ -946,17 +953,24 @@ const CITY=(()=>{const a=[];for(let i=0;i<180;i++){const u=Math.random()*2-1,x=M
 const CLITE=Array.from({length:80},()=>[Math.random(),Math.random(),Math.random()]);
 const FGB=(()=>{const a=[];for(const[side,xs]of[[-1,[-.03,.05,.12,.19]],[1,[.73,.79,.86,.94]]])xs.forEach(x=>a.push({side,x,w:.07+Math.random()*.045,h:.18+Math.random()*.3,dl:Math.random()*.35,ant:Math.random()<.4,
   jag:Array.from({length:8},()=>Math.random()),sh:Array.from({length:16},()=>[Math.random(),Math.random(),Math.random(),Math.random()])}));return a})();
+const CSTY={cap:{hm:1,keep:1},home:{hm:.9,keep:1},ind:{hm:.55,keep:.8,chim:1},port:{hm:.7,keep:.85,crane:1},base:{hm:.22,keep:.3,nofg:1}};
+const CRANE=[2.4,3.3,4.4,5.4];
+function shimmer(c,W,H,y0,y1,amp,t){if(amp<.2)return;const cv=c.canvas,s=cv.width/W;c.save();c.setTransform(1,0,0,1,0,0);
+  for(let y=Math.max(0,y0);y<Math.min(H,y1);y+=4){const k=(y-y0)/(y1-y0),dx=amp*s*Math.sin(y*.11+t*8)*Math.sin(k*Math.PI);c.drawImage(cv,0,y*s,cv.width,4*s,dx,y*s,cv.width,4*s)}c.restore()}
 const cFront=(P,t)=>t<=0?0:P.r0+(P.A-P.r0)*(1-Math.exp(-t/P.tc));
 const cArr=(P,d)=>d<=P.r0?0:d>=P.A?1e9:-P.tc*Math.log(1-(d-P.r0)/(P.A-P.r0));
+const nTot=P=>CITY.filter(b=>b.wn<=P.st.keep).length;
 function cityGround(c,W,H,hz,tau,P){
   let g=c.createLinearGradient(0,hz,0,H);g.addColorStop(0,`rgb(${rgbs(L3([34,36,48],[190,120,80],P.lit*.7))})`);g.addColorStop(.3,`rgb(${rgbs(L3([14,16,24],[90,48,30],P.lit*.5))})`);g.addColorStop(1,'rgb(4,5,9)');
   c.fillStyle=g;c.fillRect(-20,hz,W+40,H-hz+20);
+  if(P.heat>0){c.globalCompositeOperation='lighter';puff(c,W/2,hz,W*.75,'255,90,30',.32*P.heat);puff(c,W/2,hz,W*.3,'255,160,70',.3*P.heat*P.heat);c.globalCompositeOperation='source-over'}
   const on=P.nuc?(tau<.05?1:0):1;if(on)for(const q of CLITE){c.fillStyle=`rgba(255,${190+q[2]*50|0},120,${.35+.5*q[2]})`;const f=q[1]*q[1];c.fillRect(q[0]*W,hz+3+(H-hz)*f*.9,1+f*2,1+f)}
 }
 function cityBack(c,W,H,hz,cx,z,tau,P){
-  const K=6,fr=cFront(P,tau);let n=0;
+  const K=6,fr=cFront(P,tau),st=P.st;let n=0;
   for(const b of CITY){
-    const d=Math.abs(b.x),dir=b.x<0?-1:1,xs=cx+b.x*z,hp=Math.min(H*.24,b.h*z*K/1000),wp=Math.min(W*.07,Math.max(1.2,b.w*z*K*.5/1000)),
+    if(b.wn>st.keep)continue;const chim=st.chim&&b.r===3;
+    const d=Math.abs(b.x),dir=b.x<0?-1:1,xs=cx+b.x*z,hp=Math.min(H*.24,b.h*st.hm*(chim?2.4:1)*z*K/1000),wp=Math.min(W*.07,Math.max(1.2,b.w*(chim?.3:1)*z*K*.5/1000)),
       sev=clamp((1.5-d/P.eR)/.5,0,1),ta=cArr(P,d),down=sev>.45&&tau>ta;
     if(down)n++;
     if(xs+wp*3<-10||xs-wp*3>W+10)continue;
@@ -967,17 +981,23 @@ function cityBack(c,W,H,hz,cx,z,tau,P){
     if(pe>0){c.moveTo(-wp/2,0);c.lineTo(-wp/2,-h2*(.75+.25*b.s));c.lineTo(-wp*.15,-h2);c.lineTo(wp*.1,-h2*.82);c.lineTo(wp/2,-h2*(.95-.3*b.s));c.lineTo(wp/2,0);c.closePath()}
     else{c.rect(-wp/2,-hp,wp,hp);if(hp>18){if(b.r===1)c.rect(-.6,-hp*1.14,1.2,hp*.14);else if(b.r===2)c.rect(-wp*.3,-hp*1.06,wp*.6,hp*.06);else if(b.r===3){c.moveTo(-wp/2,-hp);c.lineTo(0,-hp-wp*.5);c.lineTo(wp/2,-hp)}}}
     c.fill();
-    if(P.lit>0&&!(d<P.vap)){c.fillStyle=`rgba(255,205,150,${P.lit*.75*(1-pe)})`;c.fillRect(dir>0?-wp/2:wp/2-wp*.35,-h2,wp*.35,h2)}
+    if(P.lit>0&&!(d<P.vap)){const hc=rgbs(L3([255,80,30],[255,215,160],Math.min(1,P.lit*1.4)));c.fillStyle=`rgba(${hc},${P.lit*.8*(1-pe)})`;c.fillRect(dir>0?-wp/2:wp/2-wp*.4,-h2,wp*.4,h2)}
     const glare=P.nuc&&tau>0&&tau<.5,lights=tau<0||!P.nuc&&!down&&sev<.2;
-    if(wp>=5&&h2>12&&pe===0&&(lights||glare)){const cols=Math.min(7,Math.floor(wp/4));c.lineWidth=Math.min(2,wp/cols*.45);c.strokeStyle=glare?`rgba(255,255,240,${1-tau/.5})`:'rgba(255,212,135,.75)';
+    if(wp>=5&&!chim&&h2>12&&pe===0&&(lights||glare)){const cols=Math.min(7,Math.floor(wp/4));c.lineWidth=Math.min(2,wp/cols*.45);c.strokeStyle=glare?`rgba(255,255,240,${1-tau/.5})`:'rgba(255,212,135,.75)';
       for(let j=0;j<cols;j++){c.setLineDash([1.6,2.4+((b.wn*7+j*3)%5)]);c.lineDashOffset=b.wn*23+j*5;const x=-wp/2+wp*(j+.5)/cols;c.beginPath();c.moveTo(x,-3);c.lineTo(x,-h2+3);c.stroke()}c.setLineDash([])}
     c.restore();
+    if(chim&&!down&&tau<(P.nuc?.1:99))for(let k=0;k<3;k++){const f=(tau*.08+k/3+b.s)%1;puff(c,xs+f*W*.04,hz-hp-f*H*.08,wp*1.5+2+f*H*.03,'150,150,158',.3*(1-f))}
+    const ign=P.nuc&&!down&&d<P.eR*2.4&&tau>.4+b.wn*P.tTh*.45&&!(d<P.vap);
+    if(ign){const fy=hz-h2*(.25+.55*b.s),fl=.6+.4*Math.sin(tau*13+b.wn*50);c.globalCompositeOperation='lighter';puff(c,xs+(b.wn-.5)*wp*.5,fy,wp*.7+3,'255,120,40',.45*fl);c.globalCompositeOperation='source-over';
+      if(b.s<.5)for(let k=0;k<3;k++){const f=(tau*.12+k/3+b.wn)%1;puff(c,xs+f*f*W*.05,fy-f*H*.18,wp*.6+2+f*H*.03,'52,46,46',.4*(1-f))}}
     if(down){const age=tau-ta;
       puff(c,xs+dir*age*wp*.3,hz-hp*.15-age*2,(wp*1.3+4)*(1+Math.min(2,age*.8)),'150,134,118',.55*Math.min(1,age*2.5)*Math.max(.15,1-age/9));
       if(age>.4){c.globalCompositeOperation='lighter';puff(c,xs,hz-h2*.3,wp*1.5+5,'255,110,35',.32*(.6+.4*Math.sin(tau*11+b.s*40))*Math.min(1,age-.4));c.globalCompositeOperation='source-over'}
       if(b.s<.28&&age>.8)for(let k=0;k<4;k++){const f=(tau*.1+k/4+b.s*3)%1;puff(c,xs+f*f*W*.07,hz-h2*.5-f*H*.3,wp*.8+3+f*H*.05,'44,40,42',.5*(1-f)*Math.min(1,age-.8))}}
     else if(sev>0&&tau>ta&&b.s<.15)for(let k=0;k<3;k++){const f=(tau*.1+k/3+b.s*5)%1;puff(c,xs+f*f*W*.05,hz-hp*.7-f*H*.2,wp*.6+2+f*H*.03,'60,56,58',.35*(1-f))}
   }
+  if(st.crane)for(const xk of CRANE){const xs=cx+xk*z,hc=Math.min(H*.2,170*z*K/1000);if(xs<-hc||xs>W+hc)continue;const ta=cArr(P,xk),sev=clamp((1.5-xk/P.eR)/.5,0,1),pe=sev>.45&&tau>ta?clamp((tau-ta)/1.6,0,1)**2:0;
+    c.save();c.translate(xs,hz);c.rotate(pe*1.3);c.strokeStyle=`rgb(${rgbs(L3([20,26,38],[255,150,90],P.lit*.5))})`;c.lineWidth=Math.max(1,hc*.03);c.beginPath();c.moveTo(-hc*.08,0);c.lineTo(0,-hc);c.lineTo(hc*.08,0);c.moveTo(-hc*.25,-hc*.88);c.lineTo(hc*.7,-hc*.88);c.lineTo(0,-hc*1.05);c.lineTo(-hc*.25,-hc*.88);c.moveTo(hc*.55,-hc*.88);c.lineTo(hc*.55,-hc*.5);c.stroke();c.restore()}
   if(tau>0&&fr>0){const hw=Math.min(H*.075,P.eR*z*.5+6),al=.6*clamp(1-(tau-1.5)/8,0,1),col=rgbs(L3([176,152,126],[255,170,100],P.hot*.6));
     if(al>0){for(const sd of[-1,1]){const x=cx+sd*fr*z;if(x<-hw*3||x>W+hw*3)continue;for(let j=0;j<6;j++){const r=hw*(.45+.13*j);puff(c,x-sd*j*hw*.45,hz-r*.4,r,col,al)}}
       const x0=cx-fr*z,x1=cx+fr*z;cHaze(c,x0,x1,hz,hw*1.4,al*.5)}}
@@ -985,6 +1005,7 @@ function cityBack(c,W,H,hz,cx,z,tau,P){
 }
 function cHaze(c,x0,x1,hz,h,a){const g=c.createLinearGradient(0,hz-h,0,hz);g.addColorStop(0,'rgba(120,108,96,0)');g.addColorStop(1,`rgba(120,108,96,${a})`);c.fillStyle=g;c.fillRect(x0,hz-h,x1-x0,h+2)}
 function cityFG(c,W,H,tau,P){
+  if(P.st.nofg)return;
   for(const f of FGB){
     const w=f.w*W,h=f.h*H,cxb=(f.x+f.w/2)*W,face=-f.side,t1=P.nuc?tau-P.tF-f.dl:-1,shk=t1>-.4&&t1<.5?(Math.random()-.5)*7:0,lights=tau<0||!P.nuc,glare=P.nuc&&tau>0&&tau<.6;
     [[0,.36],[.36,.7],[.7,1]].forEach(([a,b],k)=>{
@@ -994,12 +1015,15 @@ function cityFG(c,W,H,tau,P){
       if(brk&&k>0)for(let i=0;i<=6;i++)c.lineTo(-w/2+w*i/6,(f.jag[i]-.5)*w*.22);else{c.moveTo(-w/2,0);c.lineTo(w/2,0)}
       if(brk&&k<2)for(let i=6;i>=0;i--)c.lineTo(-w/2+w*i/6,-ch+(f.jag[(i+k+2)%8]-.5)*w*.3);else{c.lineTo(w/2,-ch);c.lineTo(-w/2,-ch)}
       c.closePath();
-      const lc=rgbs(L3([12,18,30],[255,196,140],P.lit*.85)),gr=c.createLinearGradient(-w/2,0,w/2,0);gr.addColorStop(face>0?0:1,'rgb(7,11,19)');gr.addColorStop(.55,'rgb(10,15,25)');gr.addColorStop(face>0?1:0,`rgb(${lc})`);
+      const lc=rgbs(L3([12,18,30],[255,196,140],P.lit*.85)),gr=c.createLinearGradient(-w/2,0,w/2,0);gr.addColorStop(face>0?0:1,'rgb(7,11,19)');gr.addColorStop(.4,'rgb(10,15,25)');gr.addColorStop(face>0?1:0,`rgb(${lc})`);
       c.fillStyle=gr;c.fill();
       if(k===2&&f.ant&&!brk){c.fillStyle='rgb(8,12,20)';c.fillRect(-1,-ch-h*.09,2,h*.09);if(Math.sin(tau*4+f.x*30)>0&&lights){c.fillStyle='#ff5d4d';c.fillRect(-1.5,-ch-h*.09-2,3,3)}}
       if(!brk&&(lights||glare)){const cols=Math.max(2,Math.floor(w/9));c.lineWidth=Math.min(3.5,w/cols*.4);c.strokeStyle=glare?`rgba(255,250,235,${1-tau/.6})`:'rgba(255,208,130,.7)';
         for(let j=0;j<cols;j++){c.setLineDash([3,4+((f.jag[j%8]*9+j*2+k*3)%7)]);c.lineDashOffset=k*11+j*7+f.x*90;const x=-w/2+w*(j+.5)/cols;c.beginPath();c.moveTo(x,-4);c.lineTo(x,-ch+4);c.stroke()}c.setLineDash([])}
       c.restore()});
+    if(P.heat>0&&tau>.6&&!(t1>0&&P.fgK)){const fx=cxb+face*w*.5;
+      for(let k=0;k<4;k++){const fq=f.sh[k],ff=(tau*.15+fq[0])%1;puff(c,fx+face*ff*w*.3,H-h*(.3+.6*fq[1])-ff*H*.12,w*.25+ff*w*.5,'58,50,48',.45*P.heat*(1-ff))}
+      c.globalCompositeOperation='lighter';for(let k=4;k<9;k++){const fq=f.sh[k];if(tau<.8+fq[2]*3)continue;puff(c,cxb+(fq[0]-.5)*w*.8,H-h*(.15+.75*fq[1]),w*.12+3,'255,130,40',.55*(.6+.4*Math.sin(tau*12+k*7)))}c.globalCompositeOperation='source-over'}
     if(t1>0){
       if(t1<2.6){c.fillStyle=`rgba(215,238,255,${.85*(1-t1/2.6)})`;for(const s of f.sh){const x=cxb+(s[0]-.5)*w+f.side*(.05+.25*s[2])*W*t1,y=H-h*s[1]-(.05+.2*s[3])*H*t1+.6*H*t1*t1;c.fillRect(x,y,2,2)}}
       if(!P.fgK)continue;
@@ -1024,7 +1048,8 @@ function drawBlast(c,W,H,t,o){
   c.fillStyle=g;c.fillRect(-20,hz,W+40,H-hz+20);
   let P=null,nd=0;
   if(o.city){const eR=effR(o.y),eC=Math.max(.08,eR*1.6);P=nuc?{nuc:1,eR,r0:Rk*.8,A:eR*1.35,tc:2.2,vap:Rk*.8,tF:3.7,fgK:eR*1.2>=6}:{nuc:0,eR:eC,r0:0,A:eC*1.3,tc:.25,vap:0};
-    P.lit=nuc?lit:tau>0?.4*clamp(1-tau/.6,0,1):0;P.hot=hot;P.fire=nuc?clamp(tau/3,0,1):0;
+    P.st=CSTY[o.cs]||CSTY.cap;P.tTh=3+1.6*Math.log10(Math.max(1,Y));P.heat=nuc&&tau>0?clamp(1-tau/P.tTh,0,1):0;
+    P.lit=nuc?Math.max(lit,P.heat):tau>0?.4*clamp(1-tau/.6,0,1):0;P.hot=hot;P.fire=nuc?clamp(tau/3,0,1):0;
     cityGround(c,W,H,hz,tau,P);nd=cityBack(c,W,H,hz,cx,nuc?z:W/6,tau,P)}
   else{c.strokeStyle=`rgba(255,255,255,${.07+.13*lit})`;c.lineWidth=1;for(let i=0;i<30;i++){const y=hz+3+(H-hz)*Math.pow(i/30,1.7),x=((i*97)%W+t*5*(i%3+1))%W;c.beginPath();c.moveTo(x,y);c.lineTo(x+8+i*2,y);c.stroke()}}
   const effpx=nuc?effR(o.y)*z:Math.max(6,10*Math.cbrt(o.y*4000)),tx=cx+(o.off||0)*effpx,ss=nuc?clamp(.25*z,5,30):26,gone=tau>0&&Math.abs(o.off||0)<=1;
@@ -1045,7 +1070,7 @@ function drawBlast(c,W,H,t,o){
       for(let j=0;j<5;j++)puff(c,cx+(j-2)*Rc*.35+tau*5,hz-hh-Rc*.3-tau*Rc*.5,Rc*(.9+tau*.3),'70,70,78',Math.max(0,.6-tau*.12));
       if(tau<.5)burst(c,cx,hz-Rc*.3,Rc*(1+2.5*k),tau/.5)}
     else{c.fillStyle=`rgba(230,238,245,${Math.max(0,.8-tau*.4)})`;c.beginPath();c.ellipse(cx,hz-8*Math.min(1,tau),10,16*Math.min(1,tau*2),0,0,7);c.fill()}
-    if(P){cityFG(c,W,H,tau,P);vignette(c,W,H,.4);hud(c,['HATÓERŐ   '+yTxt(Y),'ROMBA DŐLT '+nd+' / '+CITY.length]);return}
+    if(P){cityFG(c,W,H,tau,P);vignette(c,W,H,.4);hud(c,['HATÓERŐ   '+yTxt(Y),'ROMBA DŐLT '+nd+' / '+nTot(P)].concat(o.cn?['CÉLPONT   '+o.cn]:[]));return}
     vignette(c,W,H,.4);return}
   const Rf=Rk*Math.pow(Math.min(1,tau/1.4),.4),rise=Math.max(0,tau-1.2),s2=Math.pow(clamp(rise/9,0,1),1.1),top=Math.max(Rf*1.5,Hk*(1-Math.exp(-rise/3.4)));
   const capR=Rf+(Hk*(o.fus?.46:.36)-Rf)*s2,capH=Rf+(Hk*.15-Rf)*s2,yc=Math.max(Rf*.5,top-capH),Rp=Rf*z,cw=capR*z,ch=capH*z,cy=hz-yc*z,big=Math.max(Rp,cw);
@@ -1088,10 +1113,10 @@ function drawBlast(c,W,H,t,o){
   const ox=W*.17,oy=H*.94;if(!P){c.fillStyle='#04070d';c.beginPath();c.moveTo(ox-44,oy-7);c.lineTo(ox+40,oy-7);c.lineTo(ox+30,oy+4);c.lineTo(ox-36,oy+4);c.fill();c.fillRect(ox-12,oy-19,18,12);c.fillRect(ox-3,oy-34,2,16);
   c.fillStyle='#ffd98a';c.fillRect(ox-9,oy-15,3,2);c.fillRect(ox-2,oy-15,3,2)}
   if(tau>3.2&&tau<4.3){const k=(tau-3.2)/1.1;c.fillStyle=`rgba(255,255,255,${.4*(1-k)})`;c.fillRect(-20,hz+(H-hz)*k,W+40,7)}
-  if(P)cityFG(c,W,H,tau,P);
+  if(P){cityFG(c,W,H,tau,P);if(P.heat>0){c.globalCompositeOperation='lighter';c.fillStyle=`rgba(255,90,30,${.12*P.heat})`;c.fillRect(-20,-20,W+40,H+40);c.globalCompositeOperation='source-over';if(!RM)shimmer(c,W,H,hz-H*.38,hz+H*.12,4*P.heat,tau)}}
   vignette(c,W,H,.4);
   const fa=tau<.07?1:tau<.18?.45:Math.max(0,1-(tau-.18)/1.1);if(fa>0){c.fillStyle=`rgba(255,255,255,${fa})`;c.fillRect(-20,-20,W+40,H+40)}
-  hud(c,['HATÓERŐ   '+yTxt(Y),'TŰZGÖMB   '+(Rf<.5?f0(2*Rf*1000)+' m':f1(2*Rf)+' km'),'FELHŐTETŐ '+f1(top)+' km'].concat(P?['ROMBA DŐLT '+nd+' / '+CITY.length]:[]));
+  hud(c,['HATÓERŐ   '+yTxt(Y),'TŰZGÖMB   '+(Rf<.5?f0(2*Rf*1000)+' m':f1(2*Rf)+' km'),'FELHŐTETŐ '+f1(top)+' km'].concat(P?['ROMBA DŐLT '+nd+' / '+nTot(P)].concat(o.cn?['CÉLPONT   '+o.cn]:[]):[]));
   let bl=.1;for(const v of[.2,.5,1,2,5,10,20,50])if(v*z<=W*.3)bl=v;
   c.strokeStyle='#e9e4d6';c.lineWidth=2;c.beginPath();c.moveTo(W-16-bl*z,H-20);c.lineTo(W-16,H-20);c.moveTo(W-16-bl*z,H-25);c.lineTo(W-16-bl*z,H-15);c.moveTo(W-16,H-25);c.lineTo(W-16,H-15);c.stroke();
   c.fillStyle='#e9e4d6';c.font='11px IBM Plex Mono,monospace';c.textAlign='right';c.fillText(bl<1?bl*1000+' m':bl+' km',W-16,H-30);c.textAlign='left';
@@ -1131,7 +1156,7 @@ function drawShots(c,W,H,t){
       if(s.res==='hit'){burst(c,b[0],b[1],6+16*k,k*.6);c.fillStyle='rgba(255,140,60,.85)';c.beginPath();c.arc(b[0],b[1],3,0,7);c.fill()}
       else if(k<1){c.strokeStyle=`rgba(255,255,255,${1-k})`;c.beginPath();c.arc(b[0],b[1],3+8*k,0,7);c.stroke()}}}
 }
-function hud(c,lines){c.font='12px IBM Plex Mono,monospace';c.fillStyle='rgba(13,23,38,.6)';c.fillRect(10,10,178,lines.length*17+10);c.fillStyle='#63d3e6';lines.forEach((l,i)=>c.fillText(l,18,28+i*17))}
+function hud(c,lines){c.font='12px IBM Plex Mono,monospace';c.fillStyle='rgba(13,23,38,.6)';c.fillRect(10,10,Math.max(178,...lines.map(l=>c.measureText(l).width+16)),lines.length*17+10);c.fillStyle='#63d3e6';lines.forEach((l,i)=>c.fillText(l,18,28+i*17))}
 
 /* ---------- Lejátszás ---------- */
 function play(info){
@@ -1221,6 +1246,16 @@ const SND={ctx:null,sc:null,
     fl.frequency.setValueAtTime(f1,t);fl.frequency.exponentialRampToValueAtTime(f2,t+dur);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
     s.connect(fl);fl.connect(g);g.connect(dest||this.out);s.start(t);s.stop(t+dur+.05)}catch(e){}},
   click(){this.tone(880,0,.05,.025,'triangle')},
+  /* Városi csapás: hőimpulzus zúgása, távoli omlás, a lökéshullám érkezése, üvegcsörömpölés, összeomló tornyok */
+  cityFx(t0,b,real,d){if(!this.on())return;
+    if(!real){for(let i=0;i<3;i++)this.noise(t0+.25+i*.3,.9,.18,700,90,d,.03);for(let i=0;i<6;i++)this.noise(t0+.3+Math.random()*.6,.07,.06,9000,5000,d,.003);return}
+    const Y=Math.max(1,b.y),tTh=3+1.6*Math.log10(Y),big=.7*Math.cbrt(Y)*1.2>=6;
+    this.noise(t0+.1,tTh,.22,160,60,d,.6);this.tone(38,t0+.1,tTh,.12,'sine',30,d);
+    this.noise(t0+1.4,3.5,.25,260,50,d,.8);
+    const tF=t0+3.7;this.noise(tF-.15,.5,.9,2500,120,d,.01);this.tone(70,tF-.1,1.8,.6,'sine',28,d);
+    for(let i=0;i<22;i++){const at=tF+Math.random()*1.4;this.noise(at,.05+Math.random()*.14,.13,11000,4500,d,.002);if(i%2)this.tone(2400+Math.random()*3600,at,.12+Math.random()*.2,.02,'triangle',0,d)}
+    this.noise(tF,6,.5,600,40,d,.3);
+    if(big)for(let i=0;i<5;i++){const at=tF+.3+i*.4+Math.random()*.2;this.noise(at,1.8,.42,380,45,d,.04);this.tone(55-i*4,at,1.4,.3,'sine',30,d)}},
   ok(){[523,659,784,1047].forEach((f,i)=>this.tone(f,i*.09,.28,.06,'triangle'))},
   bad(){this.tone(220,0,.4,.07,'sawtooth',110)},
   alarm(){for(let i=0;i<3;i++){this.tone(740,i*.5,.22,.06,'square');this.tone(555,i*.5+.25,.22,.06,'square')}},
@@ -1231,7 +1266,8 @@ const SND={ctx:null,sc:null,
     const bl=(b,at)=>{if(!b)return;
       if(b.tower)for(let i=0;i<Math.floor(b.lead);i++)this.tone(660,at+b.lead%1+i,.12,.05,'square',0,d);
       const real=b.nuc&&!b.fizz;this.boom(at+b.lead,real?Math.min(1,.45+.12*Math.log10(Math.max(1,b.y))):b.y>0||b.nuc?.15:.06,d);
-      if(real)this.noise(at+b.lead+3.2,5,.7,320,30,d,.05)};
+      if(real)this.noise(at+b.lead+3.2,5,.7,320,30,d,.05);
+      if(b.city)this.cityFx(at+b.lead,b,real,d)};
     if(P.ex){P.ex.forEach(s=>this.noise(s.t0,1.2,.1,1200,200,d,.2));bl(P.blast,P.exDur)}
     else if(P.test)bl(P.test,0);
     else{if(P.res.out==='nolift')this.bad();else{const T=P.boomAt||P.T1;this.noise(0,T+.6,.55,180,700,d,1.2);this.tone(55,0,T,.2,'sawtooth',95,d)}
